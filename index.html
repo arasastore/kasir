@@ -23,21 +23,21 @@
             <h2 style="margin: 0; font-size: 18px; color: #333;">Arasa POS - Kasir</h2>
             <small id="txt-kasir-info" style="color: #007bff; font-weight: bold; font-size: 13px;">Memuat data staf...</small>
         </div>
-        <button onclick="logoutKasir()" style="background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">🚪 Logout</button>
+        <button onclick="logoutKasir()" style="width: auto; background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer;">Logout</button>
     </div>
 
     <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap;">
-        <a href="index.html" class="btn-success" style="text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">🛒 Kasir</a>
-        <a href="kasir_waiting.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📢 KDS</a>
-        <a href="kasir_hold.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">⏸️ Hold</a>
-        <a href="kasir_booking.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📅 Booking</a>
-        <a href="kasir_riwayat.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📜 Riwayat</a>
+        <a href="index.html" class="btn-success" style="text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">Kasir</a>
+        <a href="kasir_waiting.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">KDS Produksi</a>
+        <a href="kasir_hold.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">Hold Payment</a>
+        <a href="kasir_booking.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">Booking</a>
+        <a href="kasir_riwayat.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">Riwayat</a>
     </div>
 
     <div class="container">
         <div class="menu-section">
             <h2>Daftar Menu</h2>
-            <input type="text" id="search-menu" class="search-bar" placeholder="🔍 Cari menu...">
+            <input type="text" id="search-menu" class="search-bar" placeholder="Cari menu...">
             <div id="product-list" class="grid"><p>Memuat data...</p></div>
         </div>
 
@@ -45,14 +45,14 @@
             <h2>Keranjang Transaksi</h2>
             <div id="cart-items" class="cart-list"><p>Belum ada pesanan.</p></div>
             <div class="total-section">
-                <input type="text" id="customer-name" placeholder="👤 Nama Pelanggan (Wajib Dadakan/Booking)" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; background: #eee;">
+                <input type="text" id="customer-name" placeholder="Nama Pelanggan (Wajib Dadakan/Booking)" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; background: #eee;">
                 <h3>Total: Rp <span id="total-price">0</span></h3>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <button id="btn-hold" class="btn-warning" onclick="prosesTransaksi('hold')" style="flex: 1; margin:0;">Hold Payment</button>
-                    <button id="btn-booking" style="background: #17a2b8; color: white; flex: 1; margin:0; border:none; border-radius:5px; font-weight:bold; cursor:pointer;" onclick="bukaModalBooking()">📅 Jadikan Booking</button>
+                    <button id="btn-hold" class="btn-warning" onclick="prosesTransaksi('hold')" style="flex: 1; margin:0; width: auto;">Hold Payment</button>
+                    <button id="btn-booking" style="background: #17a2b8; color: white; flex: 1; margin:0; border:none; border-radius:5px; font-weight:bold; cursor:pointer; width: auto;" onclick="bukaModalBooking()">Jadikan Booking</button>
                 </div>
-                <button id="btn-pay-trigger" class="btn-success" onclick="bukaModalTipeBayar()">Bayar & Print Resi</button>
+                <button id="btn-pay-trigger" class="btn-success" style="width: 100%;" onclick="bukaModalTipeBayar()">Bayar & Print Resi</button>
             </div>
         </div>
     </div>
@@ -64,11 +64,11 @@
 
             <div style="display:flex; gap:10px; margin-bottom:15px;">
                 <div style="flex:1; text-align:left;">
-                    <label style="font-size:12px; font-weight:bold;">📦 Jml PACK (Isi 6):</label>
+                    <label style="font-size:12px; font-weight:bold;">Jml PACK (Isi 6):</label>
                     <input type="number" id="input-qty-pack" class="input-nominal" value="0" min="0" onkeyup="hitungTotalPcs()" onchange="hitungTotalPcs()">
                 </div>
                 <div style="flex:1; text-align:left;">
-                    <label style="font-size:12px; font-weight:bold;">🥟 Jml BIJI (Pcs):</label>
+                    <label style="font-size:12px; font-weight:bold;">Jml BIJI (Pcs):</label>
                     <input type="number" id="input-qty-biji" class="input-nominal" value="1" min="0" onkeyup="hitungTotalPcs()" onchange="hitungTotalPcs()">
                 </div>
             </div>
@@ -103,9 +103,9 @@
         </div>
     </div>
 
-    <div id="modalTipeBayar" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0;">Metode Pembayaran</h2><p style="color:#666;">Total: <strong style="font-size: 20px; color:#dc3545;" id="teks-total-modal">Rp 0</strong></p><div style="display:flex; gap:10px; margin-top: 20px;"><button class="modal-btn btn-success" onclick="bukaModalCash()">💵 Cash</button><button class="modal-btn" style="background: #007bff; color: white;" onclick="prosesTransaksi('paid', 'Non-Cash')">💳 Non-Cash</button></div><button class="modal-btn" style="background: #6c757d; color: white; margin-top: 10px;" onclick="tutupModal('modalTipeBayar')">Batal</button></div></div>
+    <div id="modalTipeBayar" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0;">Metode Pembayaran</h2><p style="color:#666;">Total: <strong style="font-size: 20px; color:#dc3545;" id="teks-total-modal">Rp 0</strong></p><div style="display:flex; gap:10px; margin-top: 20px;"><button class="modal-btn btn-success" onclick="bukaModalCash()">Cash</button><button class="modal-btn" style="background: #007bff; color: white;" onclick="prosesTransaksi('paid', 'Non-Cash')">Non-Cash</button></div><button class="modal-btn" style="background: #6c757d; color: white; margin-top: 10px;" onclick="tutupModal('modalTipeBayar')">Batal</button></div></div>
     <div id="modalCash" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0;">Pembayaran Cash</h2><p style="color:#666;">Total Tagihan: <strong style="font-size: 18px;" id="teks-total-cash">Rp 0</strong></p><input type="number" id="input-uang-pas" class="input-nominal" placeholder="Masukkan Nominal..." onkeyup="hitungKembalian()"><h3 id="teks-kembalian" style="color: #28a745; margin: 10px 0;">Kembalian: Rp 0</h3><button id="btn-konfirm-cash" class="modal-btn btn-success" onclick="prosesTransaksi('paid', 'Cash')" disabled>Konfirmasi & Cetak</button><button class="modal-btn" style="background: #6c757d; color: white;" onclick="tutupModal('modalCash')">Kembali</button></div></div>
-    <div id="modalSukses" class="web-modal"><div class="web-modal-content"><h1 style="font-size: 50px; margin: 0;">✅</h1><h2 id="judul-sukses">Transaksi Berhasil!</h2><p id="pesan-sukses" style="color: #555; font-size: 14px; white-space: pre-wrap;"></p><button class="modal-btn btn-success" onclick="tutupSemuaDanReset()">Selesai & Tutup</button></div></div>
+    <div id="modalSukses" class="web-modal"><div class="web-modal-content"><h1 style="font-size: 50px; margin: 0; color: #28a745;">Sukses</h1><h2 id="judul-sukses">Transaksi Berhasil!</h2><p id="pesan-sukses" style="color: #555; font-size: 14px; white-space: pre-wrap;"></p><button class="modal-btn btn-success" onclick="tutupSemuaDanReset()">Selesai & Tutup</button></div></div>
 
     <div id="print-area" class="print-area" style="display: none;"></div>
 
