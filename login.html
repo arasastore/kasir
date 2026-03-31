@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Arasa Store</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 320px; }
+        input { width: 100%; padding: 15px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 18px; text-align: center; letter-spacing: 5px; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2 style="margin:0;">ARASA STORE</h2>
+        <p style="color:#666; font-size:14px;">Masukkan PIN Keamanan</p>
+        <input type="password" id="pin-input" placeholder="****" maxlength="6">
+        <button onclick="prosesLogin()">Masuk ke Sistem</button>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+
+        async function prosesLogin() {
+            const pin = document.getElementById('pin-input').value;
+            const { data, error } = await supabaseClient.from('users').select('*').eq('pin', pin).single();
+
+            if (data) {
+                localStorage.setItem('userName', data.name);
+                localStorage.setItem('userRole', data.role);
+                localStorage.setItem('userBranch', data.branch || 'Pusat');
+                
+                // Redirect sesuai Role
+                if (data.role === 'admin_pusat' || data.role === 'admin_cabang') {
+                    window.location.href = 'admin.html';
+                } else if (data.role === 'produksi') {
+                    window.location.href = 'produksi.html';
+                } else {
+                    window.location.href = 'index.html'; // Kasir
+                }
+            } else {
+                alert("PIN Salah atau Akun Tidak Ditemukan!");
+            }
+        }
+    </script>
+</body>
+</html>

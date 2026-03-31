@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Akun - Arasa Store</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
+        .admin-container { max-width: 1050px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
+        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; }
+        .tab-link.active { background: #007bff; color: white; }
+        
+        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-success { background: #28a745; } .btn-danger { background: #dc3545; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f8f9fa; }
+        .badge { padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; color: white; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h2>Ruang Kendali Admin</h2>
+            <button onclick="logout()" class="btn btn-danger">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <a href="admin.html" class="tab-link">📊 Dashboard</a>
+            <a href="admin_menu.html" class="tab-link">🍔 Manajemen Menu</a>
+            <a href="admin_akun.html" class="tab-link active">👥 Manajemen Akun</a>
+            <a href="admin_setting.html" class="tab-link">⚙️ Pengaturan</a>
+        </div>
+
+        <div class="section-box" style="background: #fdfdfd; border: 1px solid #eee;">
+            <h3 style="margin-top: 0;">➕ Daftarkan Akun Staf Baru</h3>
+            <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div class="form-group" style="flex: 2;"><label>Nama Staf</label><input type="text" id="add-name" placeholder="Nama Karyawan"></div>
+                <div class="form-group" style="flex: 1;"><label>PIN (Min 4 Angka)</label><input type="password" id="add-pin" placeholder="****"></div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Role / Jabatan</label>
+                    <select id="add-role">
+                        <option value="kasir">Kasir</option>
+                        <option value="produksi">KDS Dapur</option>
+                        <option value="admin_cabang">Admin Cabang</option>
+                        <option value="admin_pusat">Admin Pusat (Dewa)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Lokasi Cabang</label>
+                    <select id="add-branch">
+                        <option value="Pusat">Klampis (Pusat)</option>
+                        <option value="Mojokerto">Mojokerto</option>
+                        <option value="Sidoarjo">Sidoarjo</option>
+                    </select>
+                </div>
+                <div class="form-group"><button onclick="tambahAkun()" class="btn btn-success" style="padding: 9px 20px;">Daftarkan Akun</button></div>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <h3 style="margin: 0 0 15px 0;">Daftar Akun Terdaftar</h3>
+            <table>
+                <thead><tr><th>Nama</th><th>Cabang</th><th>Role</th><th>PIN</th><th>Aksi</th></tr></thead>
+                <tbody id="user-list"><tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        
+        // PROTEKSI DEWA (KEBAL CACHE LAMA)
+        const roleSekarang = (localStorage.getItem('userRole') || '').toLowerCase().trim();
+        
+        // Terima 'admin_pusat' atau 'admin' (jaga-jaga kalau memori browser belum refresh)
+        if (roleSekarang !== 'admin_pusat' && roleSekarang !== 'admin') {
+            alert("Akses Ditolak! Anda bukan Admin Pusat.");
+            window.location.href = 'admin.html';
+        }
+
+        async function loadUsers() {
+            const { data, error } = await supabaseClient.from('users').select('*').order('created_at', { ascending: true });
+            if (error) return;
+            
+            const tbody = document.getElementById('user-list'); tbody.innerHTML = '';
+            
+            data.forEach(u => {
+                let badgeColor = '#6c757d'; // Default Kasir
+                if(u.role === 'admin_pusat' || u.role === 'admin') badgeColor = '#dc3545';
+                if(u.role === 'admin_cabang') badgeColor = '#fd7e14';
+                if(u.role === 'produksi') badgeColor = '#17a2b8';
+
+                let btnHapus = (u.role === 'admin_pusat' || u.role === 'admin') 
+                    ? '<small style="color:#aaa;">Dewa (Aman)</small>' 
+                    : `<button onclick="hapusAkun('${u.id}', '${u.name}')" class="btn btn-danger" style="font-size:11px;">Hapus</button>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${u.name}</strong></td>
+                        <td style="color: #d35400; font-weight:bold;">${u.branch || 'Pusat'}</td>
+                        <td><span class="badge" style="background:${badgeColor}">${u.role.toUpperCase()}</span></td>
+                        <td><span style="font-family: monospace; background:#eee; padding:2px 5px; border-radius:3px;">${u.pin}</span></td>
+                        <td>${btnHapus}</td>
+                    </tr>`;
+            });
+        }
+
+        async function tambahAkun() {
+            const name = document.getElementById('add-name').value.trim();
+            const pin = document.getElementById('add-pin').value.trim();
+            const role = document.getElementById('add-role').value;
+            const branch = document.getElementById('add-branch').value;
+
+            if (!name || pin.length < 4) return alert("Nama wajib diisi dan PIN minimal 4 angka!");
+
+            try {
+                const { error } = await supabaseClient.from('users').insert([{ name, pin, role, branch }]);
+                if (error) throw error;
+                document.getElementById('add-name').value = ''; document.getElementById('add-pin').value = '';
+                loadUsers(); alert("Akun berhasil dibuat!");
+            } catch (err) { alert("Gagal membuat akun! Pastikan PIN belum pernah dipakai orang lain."); }
+        }
+
+        async function hapusAkun(id, name) {
+            if (!confirm(`Hapus akun ${name}?`)) return;
+            await supabaseClient.from('users').delete().eq('id', id); loadUsers();
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>

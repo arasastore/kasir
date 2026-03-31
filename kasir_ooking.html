@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Booking - Arasa Store</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .web-modal-content { background: white; padding: 25px; border-radius: 10px; text-align: center; width: 90%; max-width: 400px;}
+        .modal-btn { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 15px; }
+        .input-nominal { width: 100%; padding: 15px; font-size: 20px; text-align: center; font-weight: bold; border: 2px solid #ccc; border-radius: 5px; margin-bottom: 10px; }
+        .grid-booking { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+        .card-booking { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: left; position: relative;}
+    </style>
+</head>
+<body>
+    <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="index.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">🛒 Kasir</a>
+        <a href="kasir_waiting.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📢 KDS</a>
+        <a href="kasir_hold.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">⏸️ Hold</a>
+        <a href="kasir_booking.html" class="btn-success" style="text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📅 Booking</a>
+        <a href="kasir_riwayat.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📜 Riwayat</a>
+    </div>
+
+    <div class="container" style="display: block; height: auto;">
+        <div class="menu-section" style="height: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Manajemen Booking (Pesanan Kedepan)</h2>
+                <input type="text" id="search-booking" class="search-bar" placeholder="🔍 Cari Nama / WA / Nota..." onkeyup="filterBooking()" style="width: 300px; margin:0;">
+            </div>
+            <div id="booking-list" class="grid-booking"><p>Memuat data booking...</p></div>
+        </div>
+    </div>
+
+    <div id="modalTipeBayar" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0;">Pelunasan Booking</h2><p style="color:#666;">Total: <strong style="font-size: 20px; color:#dc3545;" id="teks-total-modal">Rp 0</strong></p><div style="display:flex; gap:10px; margin-top: 20px;"><button class="modal-btn btn-success" onclick="bukaModalCash()">💵 Cash</button><button class="modal-btn" style="background: #007bff; color: white;" onclick="prosesLunas('Non-Cash')">💳 Non-Cash</button></div><button class="modal-btn" style="background: #6c757d; color: white; margin-top: 10px;" onclick="tutupModal('modalTipeBayar')">Batal</button></div></div>
+    <div id="modalCash" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0;">Pembayaran Cash</h2><p style="color:#666;">Total Tagihan: <strong style="font-size: 18px;" id="teks-total-cash">Rp 0</strong></p><input type="number" id="input-uang-pas" class="input-nominal" placeholder="Nominal Uang..." onkeyup="hitungKembalian()"><h3 id="teks-kembalian" style="color: #28a745; margin: 10px 0;">Kembalian: Rp 0</h3><button id="btn-konfirm-cash" class="modal-btn btn-success" onclick="prosesLunas('Cash')" disabled>Konfirmasi Lunas</button><button class="modal-btn" style="background: #6c757d; color: white;" onclick="tutupModal('modalCash')">Kembali</button></div></div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        let dataBookingAsli = [];
+        let gTrxId = null, gTotal = 0, gItems = [];
+
+        function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function loadBooking() {
+            // Ambil semua transaksi yang merupakan booking (pickup_branch is not null)
+            const { data, error } = await supabaseClient.from('transactions')
+                .select('id, receipt_no, customer_name, customer_wa, total_amount, status, booking_date, pickup_branch, transaction_items(qty, product_id, products(name, type, stock))')
+                .not('pickup_branch', 'is', null)
+                .order('booking_date', { ascending: true });
+            
+            if (!error) { dataBookingAsli = data; renderBooking(data); }
+        }
+
+        function renderBooking(data) {
+            const list = document.getElementById('booking-list'); list.innerHTML = '';
+            if (data.length === 0) return list.innerHTML = '<p>Tidak ada booking.</p>';
+
+            data.forEach(b => {
+                const isPaid = b.status === 'paid';
+                const badgeStatus = isPaid ? `<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; position:absolute; top:15px; right:15px;">✅ LUNAS</span>` 
+                                           : `<span style="background: #ffc107; color: black; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold; position:absolute; top:15px; right:15px;">⏳ HOLD PAYMENT</span>`;
+                
+                let btnAksi = isPaid ? '' : `<button onclick="siapkanLunas('${b.id}', ${b.total_amount}, '${encodeURIComponent(JSON.stringify(b.transaction_items))}')" class="btn-success" style="width:100%; padding:10px; border-radius:5px; border:none; cursor:pointer; font-weight:bold; margin-top:10px;">💰 Done (Bayar)</button>`;
+
+                const tglFormat = new Date(b.booking_date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                let itemsHtml = b.transaction_items.map(i => `• ${i.qty}x ${i.products.name}`).join('<br>');
+
+                list.innerHTML += `
+                    <div class="card-booking">
+                        ${badgeStatus}
+                        <h3 style="margin-top: 0; margin-bottom: 5px; color:#17a2b8;">📅 ${tglFormat}</h3>
+                        <p style="margin: 0; font-size: 12px; color: #666; font-family: monospace;">${b.receipt_no}</p>
+                        <hr style="border:0; border-top:1px dashed #ccc; margin: 10px 0;">
+                        <p style="margin: 2px 0;"><strong>👤 ${b.customer_name || '-'}</strong> | 📞 ${b.customer_wa || '-'}</p>
+                        <p style="margin: 2px 0; color: #d35400;"><strong>📍 Cabang: ${b.pickup_branch}</strong></p>
+                        <p style="margin: 10px 0; font-size: 13px;">${itemsHtml}</p>
+                        <h3 style="margin: 0; text-align:right;">Rp ${b.total_amount.toLocaleString('id-ID')}</h3>
+                        ${btnAksi}
+                    </div>`;
+            });
+        }
+
+        function filterBooking() {
+            const key = document.getElementById('search-booking').value.toLowerCase();
+            const filtered = dataBookingAsli.filter(b => (b.customer_name && b.customer_name.toLowerCase().includes(key)) || (b.customer_wa && b.customer_wa.includes(key)) || b.receipt_no.toLowerCase().includes(key));
+            renderBooking(filtered);
+        }
+
+        function siapkanLunas(id, total, itemsStr) {
+            gTrxId = id; gTotal = total; gItems = JSON.parse(decodeURIComponent(itemsStr));
+            document.getElementById('teks-total-modal').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            document.getElementById('modalTipeBayar').style.display = 'flex';
+        }
+
+        function bukaModalCash() {
+            tutupModal('modalTipeBayar'); document.getElementById('teks-total-cash').innerText = `Rp ${gTotal.toLocaleString('id-ID')}`;
+            document.getElementById('input-uang-pas').value = ''; document.getElementById('teks-kembalian').innerText = 'Kembalian: Rp 0';
+            document.getElementById('btn-konfirm-cash').disabled = true; document.getElementById('modalCash').style.display = 'flex';
+        }
+
+        function hitungKembalian() {
+            let uang = Number(document.getElementById('input-uang-pas').value); let btn = document.getElementById('btn-konfirm-cash');
+            if (uang >= gTotal) { document.getElementById('teks-kembalian').innerText = `Kembalian: Rp ${(uang - gTotal).toLocaleString('id-ID')}`; document.getElementById('teks-kembalian').style.color = '#28a745'; btn.disabled = false; } 
+            else { document.getElementById('teks-kembalian').innerText = `Uang Kurang!`; document.getElementById('teks-kembalian').style.color = 'red'; btn.disabled = true; }
+        }
+
+        async function prosesLunas(metode) {
+            try {
+                await supabaseClient.from('transactions').update({ status: 'paid' }).eq('id', gTrxId);
+                // Catatan: Jika ini pelunasan booking hari H, idealnya potong stok. Jika belum hari H, stok jgn dipotong. (Disimplifikasi: anggap lunas = potong stok siap-siap).
+                for (const item of gItems) {
+                    await supabaseClient.from('products').update({ stock: item.products.stock - item.qty }).eq('id', item.product_id);
+                    await supabaseClient.from('stock_logs').insert([{ product_id: item.product_id, change_qty: -item.qty, reason: 'sales_booking_lunas' }]);
+                }
+                alert(`Booking Lunas via ${metode}!`);
+                tutupModal('modalTipeBayar'); tutupModal('modalCash'); loadBooking();
+            } catch (err) { alert("Gagal proses pelunasan!"); }
+        }
+
+        loadBooking();
+    </script>
+</body>
+</html>

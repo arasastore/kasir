@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order ke Pusat</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; display: flex; gap: 10px;">
+        <a href="index.html" style="background: #eee; text-decoration: none; padding: 10px; border-radius: 5px; flex: 1; text-align: center; color: #333; font-weight: bold;">🛒 Kasir Utama</a>
+        <a href="kasir_waiting.html" style="background: #eee; text-decoration: none; padding: 10px; border-radius: 5px; flex: 1; text-align: center; color: #333; font-weight: bold;">📢 Waiting List Dadakan</a>
+        <a href="kasir_hold.html" style="background: #eee; text-decoration: none; padding: 10px; border-radius: 5px; flex: 1; text-align: center; color: #333; font-weight: bold;">⏸️ List Hold Payment</a>
+        <a href="kasir_order.html" class="btn-success" style="text-decoration: none; padding: 10px; border-radius: 5px; flex: 1; text-align: center; font-weight: bold;">📦 Order ke Pusat</a>
+    </div>
+
+    <div class="container" style="display: flex; gap: 20px;">
+        <div class="cart-section" style="flex: 1;">
+            <h2>Buat Order Baru</h2>
+            <textarea id="keterangan-order" placeholder="Deskripsikan pesanan. Contoh:&#10;1. Ote-ote biasa (50 pack)&#10;2. Nastar (10 toples)" style="width: 100%; height: 150px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px; font-family: sans-serif;"></textarea>
+            <button onclick="kirimOrder()" class="btn-success">Kirim Request ke Admin</button>
+        </div>
+
+        <div class="menu-section" style="flex: 2;">
+            <h2>Riwayat Order (Cabang)</h2>
+            <div id="riwayat-order" style="display: flex; flex-direction: column; gap: 10px;">
+                <p>Memuat data...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+
+        async function loadRiwayat() {
+            // Pastikan tabel restock_orders memiliki kolom: id, keterangan, status, created_at
+            const { data, error } = await supabaseClient.from('restock_orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            const list = document.getElementById('riwayat-order');
+            list.innerHTML = '';
+            if (error || !data || data.length === 0) return list.innerHTML = '<p>Belum ada riwayat order.</p>';
+
+            data.forEach(order => {
+                const badge = order.status === 'pending' ? 'orange' : (order.status === 'acc' ? 'green' : 'red');
+                const tgl = new Date(order.created_at).toLocaleString('id-ID');
+                list.innerHTML += `
+                    <div class="card" style="text-align: left;">
+                        <span style="background: ${badge}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; float: right;">${order.status.toUpperCase()}</span>
+                        <small style="color: #666;">${tgl}</small>
+                        <p style="margin-top: 5px; white-space: pre-wrap; font-size: 14px;">${order.keterangan}</p>
+                    </div>
+                `;
+            });
+        }
+
+        async function kirimOrder() {
+            const ket = document.getElementById('keterangan-order').value.trim();
+            if (!ket) return alert("Deskripsi order tidak boleh kosong!");
+            
+            document.querySelector('.btn-success').innerText = 'Mengirim...';
+            
+            try {
+                // Insert ke Supabase
+                const { error } = await supabaseClient.from('restock_orders').insert([{ keterangan: ket, status: 'pending' }]);
+                if (error) throw error;
+                
+                alert("Order berhasil dikirim ke Admin Pusat!");
+                document.getElementById('keterangan-order').value = '';
+                loadRiwayat();
+            } catch (err) {
+                alert("Gagal mengirim order. Pastikan tabel restock_orders sudah dibuat.");
+            } finally {
+                document.querySelector('.btn-success').innerText = 'Kirim Request ke Admin';
+            }
+        }
+
+        loadRiwayat();
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>KDS Produksi - Arasa Store</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; text-align: center; border: 2px solid #333; margin-bottom: 20px; }
+        .qty { font-size: 100px; font-weight: 900; margin: 10px 0; }
+        .branch-label { background: #d35400; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 id="txt-title">KDS PRODUKSI</h1>
+        <span class="branch-label" id="txt-branch">CABANG: -</span>
+    </div>
+    <div id="produksi-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;"></div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const myBranch = localStorage.getItem('userBranch') || 'Pusat';
+        document.getElementById('txt-branch').innerText = `CABANG: ${myBranch.toUpperCase()}`;
+
+        async function loadProduksi() {
+            // FILTER BERDASARKAN CABANG LOGIN
+            const { data, error } = await supabaseClient.from('kds_queue')
+                .select(`transaction_id, transactions ( transaction_items ( qty, products ( name, type ) ) )`)
+                .eq('status', 'waiting')
+                .eq('branch', myBranch);
+
+            if (error) return;
+            let currentTotals = {};
+            data.forEach(q => {
+                q.transactions.transaction_items.forEach(item => {
+                    if (item.products.type === 'dadakan') {
+                        currentTotals[item.products.name] = (currentTotals[item.products.name] || 0) + item.qty;
+                    }
+                });
+            });
+
+            const list = document.getElementById('produksi-list'); list.innerHTML = '';
+            for (let name in currentTotals) {
+                list.innerHTML += `<div class="card"><div style="font-size:20px; color:#ffc107;">${name}</div><div class="qty">${currentTotals[name]}</div><div>TOTAL PCS</div></div>`;
+            }
+        }
+        setInterval(loadProduksi, 3000);
+        loadProduksi();
+    </script>
+</body>
+</html>

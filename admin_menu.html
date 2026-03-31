@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Menu - Arasa Store</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
+        .admin-container { max-width: 1050px; margin: auto; }
+        
+        /* Navigasi Header */
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .header h2 { margin: 0; font-size: 18px; color: #222; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
+        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; }
+        .tab-link:hover { background: #ddd; }
+        .tab-link.active { background: #007bff; color: white; }
+        
+        /* Layout Card & Table */
+        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f8f9fa; color: #333; font-weight: bold; }
+        
+        /* Elemen Form & Tombol */
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; font-size: 12px; }
+        .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; }
+        .btn-info { background: #17a2b8; }
+        
+        /* Badge Tipe Menu */
+        .badge { padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; }
+        .badge-ready { background: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+        .badge-dadakan { background: #e0cffc; color: #431c94; border: 1px solid #d0bcf5; }
+        
+        /* Web Modal Pop-up */
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .web-modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .search-bar { width: 250px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h2>Ruang Kendali Admin</h2>
+            <button onclick="window.location.href='login.html'" class="btn btn-danger">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <a href="admin.html" class="tab-link">📊 Dashboard</a>
+            <a href="admin_menu.html" class="tab-link active">🍔 Manajemen Menu</a>
+            <a href="admin_akun.html" class="tab-link">👥 Manajemen Akun</a>
+            <a href="admin_setting.html" class="tab-link">⚙️ Pengaturan Struk & Toko</a>
+        </div>
+
+        <div class="section-box" style="background: #fdfdfd; border: 1px solid #eee;">
+            <h3 style="margin-top: 0;">➕ Tambah Menu Baru</h3>
+            <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div class="form-group" style="flex: 2;">
+                    <label>Nama Menu</label>
+                    <input type="text" id="add-name" placeholder="Contoh: Lapis Kukus">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Harga (Rp)</label>
+                    <input type="number" id="add-price" placeholder="30000">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Tipe Produk</label>
+                    <select id="add-type">
+                        <option value="ready">Ready (Rak)</option>
+                        <option value="dadakan">Dadakan (KDS Dapur)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button onclick="tambahMenu()" class="btn btn-success" style="padding: 9px 20px;">Simpan Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Daftar Menu & Update Stok</h3>
+                <input type="text" id="search-menu" class="search-bar" placeholder="🔍 Cari menu..." onkeyup="filterMenu()">
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Menu</th>
+                        <th>Tipe</th>
+                        <th style="text-align: center;">Stok DB</th>
+                        <th style="text-align: center;">Opname Fisik</th>
+                        <th style="text-align: right;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="menu-list">
+                    <tr><td colspan="5" style="text-align:center;">Memuat data database...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalEditMenu" class="web-modal">
+        <div class="web-modal-content">
+            <h2 style="margin-top:0; color:#007bff; border-bottom: 1px solid #eee; padding-bottom: 10px;">Edit Menu</h2>
+            <input type="hidden" id="edit-id">
+            
+            <div class="form-group">
+                <label>Nama Menu</label>
+                <input type="text" id="edit-name">
+            </div>
+            <div class="form-group">
+                <label>Harga (Rp)</label>
+                <input type="number" id="edit-price">
+            </div>
+            <div class="form-group">
+                <label>Tipe Produk</label>
+                <select id="edit-type">
+                    <option value="ready">Ready (Stok Rak)</option>
+                    <option value="dadakan">Dadakan (KDS Dapur)</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="simpanEditMenu()" class="btn btn-success" style="flex: 1; padding: 12px;">💾 Simpan Perubahan</button>
+                <button onclick="tutupModal('modalEditMenu')" class="btn" style="background: #6c757d; flex: 1; padding: 12px;">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        let allMenus = [];
+
+        // ================= FUNGSI LOAD DATA =================
+        async function loadMenus() {
+            const { data, error } = await supabaseClient.from('products').select('*').order('name', { ascending: true });
+            if (error) return alert("Gagal mengambil data dari database.");
+            allMenus = data;
+            renderTable(allMenus);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('menu-list');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada menu terdaftar.</td></tr>';
+            }
+
+            data.forEach(m => {
+                const badgeClass = m.type === 'ready' ? 'badge-ready' : 'badge-dadakan';
+                const stockDisplay = m.type === 'dadakan' ? '-' : m.stock;
+                
+                // Form input stok opname (hanya bisa diisi kalau tipenya ready)
+                const opnameInput = m.type === 'ready' 
+                    ? `<div style="display:flex; justify-content:center; gap:5px;">
+                           <input type="number" id="opname-${m.id}" value="${m.stock}" style="width:70px; padding:5px; text-align:center; border:1px solid #ccc; border-radius:3px;">
+                           <button onclick="updateStock('${m.id}', '${m.name}', ${m.stock})" class="btn btn-warning">Perbarui</button>
+                       </div>`
+                    : `<span style="color:#aaa;">- Dadakan -</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong style="font-size: 14px;">${m.name}</strong><br>
+                            <small style="color: #666;">Rp ${m.price.toLocaleString('id-ID')}</small>
+                        </td>
+                        <td><span class="badge ${badgeClass}">${m.type}</span></td>
+                        <td style="text-align: center; font-weight: bold;">${stockDisplay}</td>
+                        <td style="text-align: center;">${opnameInput}</td>
+                        <td style="text-align: right;">
+                            <button onclick="bukaModalEdit('${m.id}', '${m.name.replace(/'/g, "\\'")}', ${m.price}, '${m.type}')" class="btn btn-info">✏️ Edit</button>
+                            <button onclick="hapusMenu('${m.id}', '${m.name.replace(/'/g, "\\'")}')" class="btn btn-danger" style="margin-left: 5px;">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function filterMenu() {
+            const key = document.getElementById('search-menu').value.toLowerCase();
+            const filtered = allMenus.filter(m => m.name.toLowerCase().includes(key));
+            renderTable(filtered);
+        }
+
+        // ================= FUNGSI TAMBAH MENU =================
+        async function tambahMenu() {
+            const name = document.getElementById('add-name').value.trim();
+            const price = document.getElementById('add-price').value;
+            const type = document.getElementById('add-type').value;
+
+            if (!name || !price) return alert("Nama dan Harga wajib diisi!");
+
+            try {
+                await supabaseClient.from('products').insert([{ name, price: Number(price), type, stock: 0 }]);
+                document.getElementById('add-name').value = '';
+                document.getElementById('add-price').value = '';
+                loadMenus();
+            } catch (err) { alert("Gagal menambah menu!"); }
+        }
+
+        // ================= FUNGSI HAPUS MENU =================
+        async function hapusMenu(id, name) {
+            if (!confirm(`YAKIN ingin menghapus menu "${name}" secara permanen?`)) return;
+            try {
+                await supabaseClient.from('products').delete().eq('id', id);
+                loadMenus();
+            } catch (err) { alert("Gagal menghapus menu."); }
+        }
+
+        // ================= FUNGSI OPNAME STOK =================
+        async function updateStock(id, name, oldStock) {
+            const inputVal = document.getElementById(`opname-${id}`).value;
+            const newStock = Number(inputVal);
+            
+            if (newStock === oldStock) return; // Tidak ada perubahan
+            
+            if (!confirm(`Update stok fisik "${name}" dari ${oldStock} menjadi ${newStock}?`)) return;
+
+            try {
+                // Update ke master produk
+                await supabaseClient.from('products').update({ stock: newStock }).eq('id', id);
+                
+                // Catat di log (Selisihnya)
+                const selisih = newStock - oldStock;
+                await supabaseClient.from('stock_logs').insert([{ 
+                    product_id: id, 
+                    change_qty: selisih, 
+                    reason: 'opname_adjustment' 
+                }]);
+                
+                loadMenus();
+            } catch (err) { alert("Gagal memperbarui stok!"); }
+        }
+
+        // ================= FUNGSI MODAL EDIT MENU =================
+        function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function bukaModalEdit(id, name, price, type) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-price').value = price;
+            document.getElementById('edit-type').value = type;
+            document.getElementById('modalEditMenu').style.display = 'flex';
+        }
+
+        async function simpanEditMenu() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const price = Number(document.getElementById('edit-price').value);
+            const type = document.getElementById('edit-type').value;
+
+            if (!name || !price) return alert("Nama dan Harga tidak boleh kosong!");
+
+            try {
+                await supabaseClient.from('products').update({ name, price, type }).eq('id', id);
+                tutupModal('modalEditMenu');
+                loadMenus(); // Refresh tabel
+            } catch (err) { alert("Gagal menyimpan perubahan!"); }
+        }
+
+        // Panggil pertama kali
+        loadMenus();
+    </script>
+</body>
+</html>

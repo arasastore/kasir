@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Kasir - Arasa Store</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style> table { width: 100%; border-collapse: collapse; background:white;} th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; font-size: 14px;} th { background: #f8f9fa; } .stat-box { background: white; padding: 20px; border-radius: 8px; text-align: center; flex: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 5px solid #28a745;} </style>
+</head>
+<body>
+    <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="index.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">🛒 Kasir</a>
+        <a href="kasir_waiting.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📢 KDS</a>
+        <a href="kasir_hold.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">⏸️ Hold</a>
+        <a href="kasir_booking.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📅 Booking</a>
+        <a href="kasir_riwayat.html" class="btn-success" style="text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📜 Riwayat</a>
+    </div>
+
+    <div class="container" style="display: block; height: auto;">
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+            <div class="stat-box">
+                <h3 style="margin:0 0 5px 0; color:#666; font-size:14px;">Total Omzet Hari Ini</h3>
+                <h2 style="margin:0; color:#28a745; font-size:28px;" id="omzet-hari">Rp 0</h2>
+            </div>
+            <div class="stat-box">
+                <h3 style="margin:0 0 5px 0; color:#666; font-size:14px;">Total Omzet Bulan Ini</h3>
+                <h2 style="margin:0; color:#007bff; font-size:28px;" id="omzet-bulan">Rp 0</h2>
+            </div>
+        </div>
+
+        <div class="menu-section" style="height: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Riwayat Transaksi</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: bold;">Filter Tanggal:</label>
+                    <input type="date" id="filter-date" style="padding: 8px; border: 1px solid #ccc; border-radius: 5px;" onchange="loadRiwayat()">
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Waktu (Dibuat)</th><th>Nota / Booking</th><th>Status</th><th>Total (Rp)</th><th>Aksi</th></tr></thead>
+                <tbody id="riwayat-list"><tr><td colspan="5">Memuat data...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        
+        // Set Default Input Tanggal = Hari Ini
+        document.getElementById('filter-date').value = new Date().toISOString().split('T')[0];
+
+        async function loadRiwayat() {
+            const filterDate = document.getElementById('filter-date').value;
+            const now = new Date(); const thisMonth = now.toISOString().slice(0, 7); // Format: YYYY-MM
+
+            // Load All Data untuk hitung Omzet
+            const { data: allTrx } = await supabaseClient.from('transactions').select('total_amount, booking_date').eq('status', 'paid');
+            let oHari = 0, oBulan = 0;
+            if (allTrx) {
+                allTrx.forEach(t => {
+                    if (t.booking_date === new Date().toISOString().split('T')[0]) oHari += t.total_amount; // Hitung hari ini
+                    if (t.booking_date && t.booking_date.startsWith(thisMonth)) oBulan += t.total_amount; // Hitung bulan ini
+                });
+            }
+            document.getElementById('omzet-hari').innerText = `Rp ${oHari.toLocaleString('id-ID')}`;
+            document.getElementById('omzet-bulan').innerText = `Rp ${oBulan.toLocaleString('id-ID')}`;
+
+            // Load Data Tabel berdasar Filter Tanggal
+            const { data: listTrx, error } = await supabaseClient.from('transactions')
+                .select('id, receipt_no, total_amount, status, created_at, booking_date, pickup_branch, delete_request')
+                .eq('booking_date', filterDate)
+                .order('created_at', { ascending: false });
+
+            const tbody = document.getElementById('riwayat-list'); tbody.innerHTML = '';
+            if (error || !listTrx || listTrx.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Tidak ada transaksi di tanggal ini.</td></tr>';
+
+            listTrx.forEach(trx => {
+                const isPaid = trx.status === 'paid';
+                const statusHtml = isPaid ? `<span style="color:green; font-weight:bold;">LUNAS</span>` : `<span style="color:orange; font-weight:bold;">HOLD</span>`;
+                const infoExtra = trx.pickup_branch ? `<br><small style="color:#d35400;">(Booking utk: ${trx.booking_date})</small>` : '';
+                
+                let btnHapus = '';
+                if (trx.delete_request) {
+                    btnHapus = `<span style="color: red; font-size: 12px; font-weight: bold;">⏳ Menunggu ACC Admin</span>`;
+                } else {
+                    btnHapus = `<button onclick="reqHapus('${trx.id}', '${trx.receipt_no}')" style="background:#dc3545; color:white; padding:5px 10px; border:none; border-radius:3px; cursor:pointer; font-size:12px;">🗑️ Request Hapus</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${new Date(trx.created_at).toLocaleString('id-ID')}</td>
+                        <td style="font-family: monospace;"><strong>${trx.receipt_no}</strong>${infoExtra}</td>
+                        <td>${statusHtml}</td>
+                        <td><strong>Rp ${trx.total_amount.toLocaleString('id-ID')}</strong></td>
+                        <td>${btnHapus}</td>
+                    </tr>`;
+            });
+        }
+
+        window.reqHapus = async function(id, nota) {
+            if(!confirm(`Yakin ingin REQUEST HAPUS untuk nota ${nota}?\nIni membutuhkan persetujuan Admin.`)) return;
+            try {
+                await supabaseClient.from('transactions').update({ delete_request: true }).eq('id', id);
+                alert("Request penghapusan berhasil dikirim ke Admin!");
+                loadRiwayat();
+            } catch (err) { alert("Gagal mengirim request."); }
+        }
+
+        loadRiwayat();
+    </script>
+</body>
+</html>

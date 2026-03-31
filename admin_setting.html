@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengaturan Toko - Arasa Store</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
+        .admin-container { max-width: 1050px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .header h2 { margin: 0; font-size: 18px; color: #222; }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
+        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; }
+        .tab-link:hover { background: #ddd; }
+        .tab-link.active { background: #007bff; color: white; }
+        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .btn-success { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="header">
+            <h2>Ruang Kendali Admin</h2>
+            <button onclick="window.location.href='login.html'" style="background: #dc3545; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <a href="admin.html" class="tab-link">📊 Dashboard</a>
+            <a href="admin_menu.html" class="tab-link">🍔 Manajemen Menu</a>
+            <a href="admin_akun.html" class="tab-link">👥 Manajemen Akun</a>
+            <a href="admin_setting.html" class="tab-link active">⚙️ Pengaturan Struk & Toko</a>
+        </div>
+
+        <div class="section-box" style="max-width: 600px; margin: auto;">
+            <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Pengaturan Template Struk</h3>
+            
+            <div class="form-group">
+                <label>Nama Toko (Header)</label>
+                <input type="text" id="set-name" placeholder="Contoh: ARASA STORE">
+            </div>
+            
+            <div class="form-group">
+                <label>Alamat / Tagline (Di bawah nama toko)</label>
+                <textarea id="set-address" rows="2" placeholder="Contoh: Pusat Oleh-Oleh Khas Jatim&#10;Jl. Klampis Jaya No. 1"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Pesan Bawah (Footer)</label>
+                <textarea id="set-footer" rows="2" placeholder="Contoh: Terima Kasih Atas Kunjungan Anda!"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Ukuran Kertas Printer Thermal</label>
+                <select id="set-paper">
+                    <option value="58mm">Kecil (58mm)</option>
+                    <option value="80mm">Besar (80mm)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Logo Toko (Opsional - Pastikan gambar hitam putih/monokrom agar jelas di struk)</label>
+                <input type="file" id="set-logo" accept="image/png, image/jpeg" style="padding: 5px;">
+                <div style="margin-top: 10px; text-align: center; background: #f8f9fa; padding: 10px; border: 1px dashed #ccc;">
+                    <img id="preview-logo" src="" style="max-width: 150px; max-height: 100px; display: none;">
+                    <p id="teks-no-logo" style="margin:0; color:#888;">Belum ada logo terpasang.</p>
+                </div>
+            </div>
+
+            <button onclick="simpanPengaturan()" class="btn-success">💾 Simpan Pengaturan</button>
+            <p id="notif-simpan" style="color: #28a745; text-align: center; font-weight: bold; display: none;">Pengaturan Berhasil Disimpan!</p>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        let logoBase64 = "";
+
+        // Fungsi Convert Gambar ke Base64
+        document.getElementById('set-logo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                logoBase64 = reader.result;
+                document.getElementById('preview-logo').src = logoBase64;
+                document.getElementById('preview-logo').style.display = 'inline-block';
+                document.getElementById('teks-no-logo').style.display = 'none';
+            }
+            if (file) { reader.readAsDataURL(file); }
+        });
+
+        async function loadPengaturan() {
+            const { data, error } = await supabaseClient.from('store_settings').select('*').eq('id', 1).single();
+            if (data) {
+                document.getElementById('set-name').value = data.store_name || '';
+                document.getElementById('set-address').value = data.store_address || '';
+                document.getElementById('set-footer').value = data.footer_message || '';
+                document.getElementById('set-paper').value = data.paper_size || '58mm';
+                if (data.logo_base64) {
+                    logoBase64 = data.logo_base64;
+                    document.getElementById('preview-logo').src = logoBase64;
+                    document.getElementById('preview-logo').style.display = 'inline-block';
+                    document.getElementById('teks-no-logo').style.display = 'none';
+                }
+            }
+        }
+
+        async function simpanPengaturan() {
+            const payload = {
+                id: 1, // Fix ID 1 karena hanya ada 1 toko
+                store_name: document.getElementById('set-name').value,
+                store_address: document.getElementById('set-address').value,
+                footer_message: document.getElementById('set-footer').value,
+                paper_size: document.getElementById('set-paper').value,
+                logo_base64: logoBase64
+            };
+
+            const { error } = await supabaseClient.from('store_settings').upsert(payload);
+            if (error) {
+                alert("Gagal menyimpan! Pastikan tabel store_settings sudah dibuat di Supabase.");
+                console.error(error);
+            } else {
+                const notif = document.getElementById('notif-simpan');
+                notif.style.display = 'block';
+                setTimeout(() => { notif.style.display = 'none'; }, 3000);
+            }
+        }
+
+        loadPengaturan();
+    </script>
+</body>
+</html>
