@@ -9,138 +9,176 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
         .admin-container { max-width: 1050px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
         .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; }
         .tab-link.active { background: #007bff; color: white; }
-        
-        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .section-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 10px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #555; }
         .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
         .btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: white; }
         .btn-success { background: #28a745; } .btn-danger { background: #dc3545; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         th { background: #f8f9fa; }
         .badge { padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; color: white; }
+        
+        /* WEB MODAL SYSTEM */
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
+        .web-modal-content { background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
+        .btn-modal { padding: 10px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%; margin-top: 10px; color: white;}
     </style>
 </head>
 <body>
     <div class="admin-container">
         <div class="header">
-            <h2>Ruang Kendali Admin</h2>
+            <h2>Manajemen Akun Global</h2>
             <button onclick="logout()" class="btn btn-danger">Logout</button>
         </div>
 
         <div class="tabs">
-            <a href="admin.html" class="tab-link">Dashboard</a>
-            <a href="admin_menu.html" class="tab-link">Manajemen Menu</a>
-            <a href="admin_akun.html" class="tab-link active">Manajemen Akun</a>
-            <a href="admin_setting.html" class="tab-link">Pengaturan</a>
+            <a href="admin.html" class="tab-link">📊 Dashboard Utama</a>
+            <a href="admin_menu.html" class="tab-link">🍔 Manajemen Menu</a>
+            <a href="admin_akun.html" class="tab-link active">👥 Manajemen Akun</a>
+            <a href="admin_setting.html" class="tab-link">⚙️ Pengaturan</a>
         </div>
 
         <div class="section-box" style="background: #fdfdfd; border: 1px solid #eee;">
-            <h3 style="margin-top: 0;">Daftarkan Akun Staf Baru</h3>
+            <h3 style="margin-top: 0;">➕ Daftarkan Akun Staf Baru</h3>
             <div style="display: flex; gap: 15px; align-items: flex-end;">
-                <div class="form-group" style="flex: 2;"><label>Nama Staf</label><input type="text" id="add-name" placeholder="Nama Karyawan"></div>
+                <div class="form-group" style="flex: 2;"><label>Nama Panggilan Staf</label><input type="text" id="add-name" placeholder="Contoh: Elok"></div>
                 <div class="form-group" style="flex: 1;"><label>PIN (Min 4 Angka)</label><input type="password" id="add-pin" placeholder="****"></div>
                 <div class="form-group" style="flex: 1;">
                     <label>Role / Jabatan</label>
                     <select id="add-role">
                         <option value="kasir">Kasir</option>
-                        <option value="produksi">KDS Dapur</option>
+                        <option value="produksi">Produksi</option>
                         <option value="admin_cabang">Admin Cabang</option>
-                        <option value="admin_pusat">Admin Pusat </option>
+                        <option value="admin_pusat">Admin Pusat (Dewa)</option>
                     </select>
                 </div>
                 <div class="form-group" style="flex: 1;">
                     <label>Lokasi Cabang</label>
                     <select id="add-branch">
-                        <option value="Pusat">Arasa pusat</option>
-                        <option value="Mojokerto">Arasa Gatoel</option>
-                        <option value="Sidoarjo">Arasa Stasiun Mojokerto</option>
+                        <option value="Pusat">Arasa Pusat</option>
+                        <option value="Gatoel">Arasa Gatoel</option>
+                        <option value="Stasiun">Arasa Stasiun</option>
                     </select>
                 </div>
                 <div class="form-group"><button onclick="tambahAkun()" class="btn btn-success" style="padding: 9px 20px;">Daftarkan Akun</button></div>
             </div>
+            <p style="font-size: 11px; color: #888; margin-top: 5px;">*Sistem akan otomatis memformat nama menjadi: [Nama] [Role] Arasa [Cabang]</p>
         </div>
 
         <div class="section-box">
             <h3 style="margin: 0 0 15px 0;">Daftar Akun Terdaftar</h3>
             <table>
-                <thead><tr><th>Nama</th><th>Cabang</th><th>Role</th><th>PIN</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Display Name</th><th>Cabang</th><th>Role DB</th><th>PIN</th><th>Aksi</th></tr></thead>
                 <tbody id="user-list"><tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr></tbody>
             </table>
         </div>
     </div>
 
+    <div id="modalAlert" class="web-modal">
+        <div class="web-modal-content">
+            <h2 id="alert-title" style="margin-top:0; color:#007bff;">Info</h2>
+            <p id="alert-message" style="color:#555; font-size: 14px; white-space: pre-wrap; line-height: 1.5;"></p>
+            <button onclick="document.getElementById('modalAlert').style.display='none'" class="btn-modal" style="background:#007bff;">OK Mengerti</button>
+        </div>
+    </div>
+
+    <div id="modalConfirm" class="web-modal">
+        <div class="web-modal-content">
+            <h2 id="confirm-title" style="margin-top:0; color:#dc3545;">Konfirmasi</h2>
+            <p id="confirm-message" style="color:#555; font-size: 14px; white-space: pre-wrap; line-height: 1.5;"></p>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="btn-confirm-yes" class="btn-modal" style="margin-top:0; background:#dc3545; flex:1;">Ya, Hapus</button>
+                <button onclick="document.getElementById('modalConfirm').style.display='none'" class="btn-modal" style="margin-top:0; background:#6c757d; flex:1;">Batal</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const myRole = (localStorage.getItem('userRole') || '').toLowerCase().trim();
         
-        // PROTEKSI DEWA (KEBAL CACHE LAMA)
-        const roleSekarang = (localStorage.getItem('userRole') || '').toLowerCase().trim();
-        
-        // Terima 'admin_pusat' atau 'admin' (jaga-jaga kalau memori browser belum refresh)
-        if (roleSekarang !== 'admin_pusat' && roleSekarang !== 'admin') {
-            alert("Akses Ditolak! Anda bukan Admin Pusat.");
-            window.location.href = 'admin.html';
+        if (myRole !== 'admin_pusat' && myRole !== 'admin') {
+            window.location.href = 'admin.html'; // Kalau kebobolan, usir.
         }
+
+        // ================= WEB MODAL SYSTEM =================
+        function showAlert(title, message, isError = false) {
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-title').style.color = isError ? '#dc3545' : '#007bff';
+            document.getElementById('alert-message').innerText = message;
+            document.getElementById('modalAlert').style.display = 'flex';
+        }
+
+        let tempConfirmAction = null;
+        function showConfirm(title, message, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            tempConfirmAction = callback;
+            document.getElementById('modalConfirm').style.display = 'flex';
+        }
+
+        document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+            document.getElementById('modalConfirm').style.display = 'none';
+            if (tempConfirmAction) tempConfirmAction();
+        });
+        // ====================================================
 
         async function loadUsers() {
             const { data, error } = await supabaseClient.from('users').select('*').order('created_at', { ascending: true });
-            if (error) return;
-            
+            if (error) return showAlert("Error", "Gagal memuat daftar akun.", true);
             const tbody = document.getElementById('user-list'); tbody.innerHTML = '';
             
             data.forEach(u => {
-                let badgeColor = '#6c757d'; // Default Kasir
+                let badgeColor = '#6c757d'; 
                 if(u.role === 'admin_pusat' || u.role === 'admin') badgeColor = '#dc3545';
                 if(u.role === 'admin_cabang') badgeColor = '#fd7e14';
                 if(u.role === 'produksi') badgeColor = '#17a2b8';
 
-                let btnHapus = (u.role === 'admin_pusat' || u.role === 'admin') 
-                    ? '<small style="color:#aaa;">Dewa (Aman)</small>' 
-                    : `<button onclick="hapusAkun('${u.id}', '${u.name}')" class="btn btn-danger" style="font-size:11px;">Hapus</button>`;
+                let btnHapus = (u.role === 'admin_pusat' || u.role === 'admin') ? '<small style="color:#aaa;">Dewa (Aman)</small>' : `<button onclick="hapusAkun('${u.id}', '${u.name}')" class="btn btn-danger" style="font-size:11px;">Hapus</button>`;
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${u.name}</strong></td>
-                        <td style="color: #d35400; font-weight:bold;">${u.branch || 'Pusat'}</td>
-                        <td><span class="badge" style="background:${badgeColor}">${u.role.toUpperCase()}</span></td>
-                        <td><span style="font-family: monospace; background:#eee; padding:2px 5px; border-radius:3px;">${u.pin}</span></td>
-                        <td>${btnHapus}</td>
-                    </tr>`;
+                tbody.innerHTML += `<tr><td><strong>${u.name}</strong></td><td style="color: #d35400; font-weight:bold;">${u.branch || 'Pusat'}</td><td><span class="badge" style="background:${badgeColor}">${u.role.toUpperCase()}</span></td><td><span style="font-family: monospace; background:#eee; padding:2px 5px; border-radius:3px;">${u.pin}</span></td><td>${btnHapus}</td></tr>`;
             });
         }
 
         async function tambahAkun() {
-            const name = document.getElementById('add-name').value.trim();
+            const rawName = document.getElementById('add-name').value.trim();
             const pin = document.getElementById('add-pin').value.trim();
             const role = document.getElementById('add-role').value;
             const branch = document.getElementById('add-branch').value;
 
-            if (!name || pin.length < 4) return alert("Nama wajib diisi dan PIN minimal 4 angka!");
+            if (!rawName || pin.length < 4) return showAlert("Peringatan", "Nama Panggilan wajib diisi dan PIN minimal 4 angka!", true);
+
+            let labelRole = "Kasir";
+            if (role === 'admin_pusat' || role === 'admin_cabang') labelRole = "Admin";
+            if (role === 'produksi') labelRole = "Produksi";
+            const finalName = `${rawName} ${labelRole} Arasa ${branch}`;
 
             try {
-                const { error } = await supabaseClient.from('users').insert([{ name, pin, role, branch }]);
+                const { error } = await supabaseClient.from('users').insert([{ name: finalName, pin, role, branch }]);
                 if (error) throw error;
                 document.getElementById('add-name').value = ''; document.getElementById('add-pin').value = '';
-                loadUsers(); alert("Akun berhasil dibuat!");
-            } catch (err) { alert("Gagal membuat akun! Pastikan PIN belum pernah dipakai orang lain."); }
+                loadUsers(); 
+                showAlert("Akun Berhasil Dibuat", `Nama Login: ${finalName}\nLokasi: Arasa ${branch}`);
+            } catch (err) { showAlert("Error", "Gagal membuat akun! Pastikan PIN unik dan belum pernah dipakai.", true); }
         }
 
-        async function hapusAkun(id, name) {
-            if (!confirm(`Hapus akun ${name}?`)) return;
-            await supabaseClient.from('users').delete().eq('id', id); loadUsers();
+        function hapusAkun(id, name) {
+            showConfirm("Hapus Akun Staf", `Yakin ingin mencabut akses dan menghapus akun "${name}"?`, async () => {
+                try {
+                    await supabaseClient.from('users').delete().eq('id', id); 
+                    loadUsers(); 
+                    showAlert("Sukses", `Akun ${name} telah dihapus.`);
+                } catch (err) { showAlert("Error", "Gagal menghapus akun.", true); }
+            });
         }
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
-
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
         loadUsers();
     </script>
 </body>
