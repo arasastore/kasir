@@ -32,8 +32,11 @@
                 localStorage.setItem('userRole', data.role);
                 localStorage.setItem('userBranch', data.branch || 'Pusat');
                 
+                // PENCATAT WAKTU LOGIN (Gembok 15 Jam)
+                localStorage.setItem('loginTime', Date.now().toString());
+                
                 // Redirect sesuai Role
-                if (data.role === 'admin_pusat' || data.role === 'admin_cabang') {
+                if (data.role === 'admin_pusat' || data.role === 'admin_cabang' || data.role === 'admin') {
                     window.location.href = 'admin.html';
                 } else if (data.role === 'produksi') {
                     window.location.href = 'produksi.html';
