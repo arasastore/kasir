@@ -18,13 +18,20 @@
     </style>
 </head>
 <body>
+    <div style="background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0; font-size: 18px; color: #333;">Arasa POS - Kasir</h2>
+            <small id="txt-kasir-info" style="color: #007bff; font-weight: bold; font-size: 13px;">Memuat data staf...</small>
+        </div>
+        <button onclick="logoutKasir()" style="background: #dc3545; color: white; border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;">🚪 Logout</button>
+    </div>
+
     <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 10px; flex-wrap: wrap;">
         <a href="index.html" class="btn-success" style="text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">🛒 Kasir</a>
         <a href="kasir_waiting.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📢 KDS</a>
         <a href="kasir_hold.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">⏸️ Hold</a>
         <a href="kasir_booking.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📅 Booking</a>
         <a href="kasir_riwayat.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📜 Riwayat</a>
-        <a href="kasir_order.html" style="background: #eee; color: #333; text-decoration: none; padding: 10px; text-align: center; border-radius: 5px; flex: 1; font-weight: bold;">📦 Order Pusat</a>
     </div>
 
     <div class="container">
@@ -80,7 +87,14 @@
             <h2 style="margin-top:0; color:#17a2b8;">Input Data Booking</h2>
             <p style="color:#666; margin-bottom:20px;">Pesanan untuk hari lain.</p>
             <div class="form-group-booking"><label>Tanggal Pengambilan</label><input type="date" id="book-date"></div>
-            <div class="form-group-booking"><label>Cabang Pengambilan</label><select id="book-branch"><option value="Klampis">Klampis (Pusat)</option><option value="Mojokerto">Mojokerto</option><option value="Sidoarjo">Sidoarjo</option></select></div>
+            <div class="form-group-booking">
+                <label>Cabang Pengambilan</label>
+                <select id="book-branch">
+                    <option value="Pusat">Arasa Pusat</option>
+                    <option value="Gatoel">Arasa Gatoel</option>
+                    <option value="Stasiun">Arasa Stasiun</option>
+                </select>
+            </div>
             <div class="form-group-booking"><label>Nomor WhatsApp Customer</label><input type="number" id="book-wa" placeholder="08123456789"></div>
             <h3 style="margin: 15px 0;">Total: Rp <span id="book-total">0</span></h3>
             <button class="modal-btn btn-warning" onclick="prosesTransaksi('hold', 'Hold', true)">Simpan Booking (Belum Bayar)</button>
