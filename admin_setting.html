@@ -3,134 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengaturan Toko - Arasa Store</title>
+    <title>Pengaturan - Arasa Store</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
-        .admin-container { max-width: 1050px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .header h2 { margin: 0; font-size: 18px; color: #222; }
+        .admin-container { max-width: 800px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
-        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; font-size: 13px; color: #555; transition: 0.2s; }
-        .tab-link:hover { background: #ddd; }
+        .tab-link { padding: 12px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; text-align: center; flex: 1; }
         .tab-link.active { background: #007bff; color: white; }
-        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .section-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn-success { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; height: 80px; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; font-size: 14px; width: 100%; }
+        .btn-success { background: #28a745; } .btn-danger { background: #dc3545; width: auto; }
+        
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header button { width: 100%; }
+            .tabs { flex-wrap: wrap; } .tab-link { flex: 1 1 45%; margin-bottom: 5px; border-radius: 4px; }
+        }
+
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: white; padding: 25px; border-radius: 10px; width: 100%; max-width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
+        .btn-modal { padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%; margin-top: 10px; color: white;}
     </style>
 </head>
 <body>
     <div class="admin-container">
         <div class="header">
-            <h2>Ruang Kendali Admin</h2>
-            <button onclick="window.location.href='login.html'" style="background: #dc3545; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Logout</button>
+            <div><h2 style="margin: 0;">Ruang Kendali Admin</h2><small id="txt-role-branch" style="color: #007bff; font-weight: bold; font-size: 14px;"></small></div>
+            <button onclick="logout()" class="btn btn-danger">Logout</button>
         </div>
-
         <div class="tabs">
-            <a href="admin.html" class="tab-link">📊 Dashboard</a>
-            <a href="admin_menu.html" class="tab-link">🍔 Manajemen Menu</a>
-            <a href="admin_akun.html" class="tab-link">👥 Manajemen Akun</a>
-            <a href="admin_setting.html" class="tab-link active">⚙️ Pengaturan Struk & Toko</a>
+            <a href="admin.html" class="tab-link">Dashboard</a>
+            <a href="admin_menu.html" class="tab-link">Menu & Stok</a>
+            <a href="admin_akun.html" class="tab-link" id="nav-akun" style="display: none;">Akun Staf</a>
+            <a href="admin_setting.html" class="tab-link active">Pengaturan</a>
         </div>
 
-        <div class="section-box" style="max-width: 600px; margin: auto;">
-            <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Pengaturan Template Struk</h3>
-            
-            <div class="form-group">
-                <label>Nama Toko (Header)</label>
-                <input type="text" id="set-name" placeholder="Contoh: ARASA STORE">
-            </div>
-            
-            <div class="form-group">
-                <label>Alamat / Tagline (Di bawah nama toko)</label>
-                <textarea id="set-address" rows="2" placeholder="Contoh: Pusat Oleh-Oleh Khas Jatim&#10;Jl. Klampis Jaya No. 1"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label>Pesan Bawah (Footer)</label>
-                <textarea id="set-footer" rows="2" placeholder="Contoh: Terima Kasih Atas Kunjungan Anda!"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Ukuran Kertas Printer Thermal</label>
-                <select id="set-paper">
-                    <option value="58mm">Kecil (58mm)</option>
-                    <option value="80mm">Besar (80mm)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Logo Toko (Opsional - Pastikan gambar hitam putih/monokrom agar jelas di struk)</label>
-                <input type="file" id="set-logo" accept="image/png, image/jpeg" style="padding: 5px;">
-                <div style="margin-top: 10px; text-align: center; background: #f8f9fa; padding: 10px; border: 1px dashed #ccc;">
-                    <img id="preview-logo" src="" style="max-width: 150px; max-height: 100px; display: none;">
-                    <p id="teks-no-logo" style="margin:0; color:#888;">Belum ada logo terpasang.</p>
-                </div>
-            </div>
-
-            <button onclick="simpanPengaturan()" class="btn-success">💾 Simpan Pengaturan</button>
-            <p id="notif-simpan" style="color: #28a745; text-align: center; font-weight: bold; display: none;">Pengaturan Berhasil Disimpan!</p>
+        <div class="section-box">
+            <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Pengaturan Cetak Struk</h3>
+            <div class="form-group"><label>Nama Toko (Header)</label><input type="text" id="store-name" placeholder="ARASA STORE"></div>
+            <div class="form-group"><label>Alamat & Kontak (Sub-Header)</label><textarea id="store-address" placeholder="Jl. Raya Pusat No. 1&#10;Telp: 08123456789"></textarea></div>
+            <div class="form-group"><label>Pesan Penutup (Footer)</label><textarea id="footer-message" placeholder="Terima Kasih Atas Kunjungan Anda"></textarea></div>
+            <div class="form-group"><label>Ukuran Kertas Thermal</label><select id="paper-size"><option value="58mm">58mm (Kecil)</option><option value="80mm">80mm (Besar)</option></select></div>
+            <button onclick="saveSettings()" class="btn btn-success">Simpan Pengaturan</button>
         </div>
     </div>
 
+    <div id="modalAlert" class="web-modal"><div class="web-modal-content"><h2 id="alert-title" style="margin-top:0;">Info</h2><p id="alert-message" style="color:#555; line-height: 1.5;"></p><button onclick="document.getElementById('modalAlert').style.display='none'" class="btn-modal" style="background:#007bff;">OK</button></div></div>
+
     <script>
         const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
-        let logoBase64 = "";
+        const myRole = (localStorage.getItem('userRole') || '').toLowerCase().trim(); const myBranch = localStorage.getItem('userBranch') || 'Pusat';
+        if (myRole !== 'admin_pusat' && myRole !== 'admin_cabang' && myRole !== 'admin') window.location.href = 'login.html';
+        document.getElementById('txt-role-branch').innerText = `Akses: ${(myRole === 'admin' || myRole === 'admin_pusat') ? 'Admin Pusat' : 'Admin Cabang'} | Lokasi: Arasa ${myBranch.toUpperCase()}`;
+        if (myRole === 'admin_pusat' || myRole === 'admin') document.getElementById('nav-akun').style.display = 'block';
 
-        // Fungsi Convert Gambar ke Base64
-        document.getElementById('set-logo').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = function() {
-                logoBase64 = reader.result;
-                document.getElementById('preview-logo').src = logoBase64;
-                document.getElementById('preview-logo').style.display = 'inline-block';
-                document.getElementById('teks-no-logo').style.display = 'none';
-            }
-            if (file) { reader.readAsDataURL(file); }
-        });
+        function showAlert(t,m,e=false){document.getElementById('alert-title').innerText=t;document.getElementById('alert-title').style.color=e?'#dc3545':'#007bff';document.getElementById('alert-message').innerText=m;document.getElementById('modalAlert').style.display='flex';}
 
-        async function loadPengaturan() {
+        async function loadSettings() {
             const { data, error } = await supabaseClient.from('store_settings').select('*').eq('id', 1).single();
             if (data) {
-                document.getElementById('set-name').value = data.store_name || '';
-                document.getElementById('set-address').value = data.store_address || '';
-                document.getElementById('set-footer').value = data.footer_message || '';
-                document.getElementById('set-paper').value = data.paper_size || '58mm';
-                if (data.logo_base64) {
-                    logoBase64 = data.logo_base64;
-                    document.getElementById('preview-logo').src = logoBase64;
-                    document.getElementById('preview-logo').style.display = 'inline-block';
-                    document.getElementById('teks-no-logo').style.display = 'none';
-                }
+                document.getElementById('store-name').value = data.store_name || '';
+                document.getElementById('store-address').value = data.store_address || '';
+                document.getElementById('footer-message').value = data.footer_message || '';
+                document.getElementById('paper-size').value = data.paper_size || '58mm';
             }
         }
 
-        async function simpanPengaturan() {
-            const payload = {
-                id: 1, // Fix ID 1 karena hanya ada 1 toko
-                store_name: document.getElementById('set-name').value,
-                store_address: document.getElementById('set-address').value,
-                footer_message: document.getElementById('set-footer').value,
-                paper_size: document.getElementById('set-paper').value,
-                logo_base64: logoBase64
-            };
-
-            const { error } = await supabaseClient.from('store_settings').upsert(payload);
-            if (error) {
-                alert("Gagal menyimpan! Pastikan tabel store_settings sudah dibuat di Supabase.");
-                console.error(error);
-            } else {
-                const notif = document.getElementById('notif-simpan');
-                notif.style.display = 'block';
-                setTimeout(() => { notif.style.display = 'none'; }, 3000);
-            }
+        async function saveSettings() {
+            const updates = { store_name: document.getElementById('store-name').value, store_address: document.getElementById('store-address').value, footer_message: document.getElementById('footer-message').value, paper_size: document.getElementById('paper-size').value };
+            try {
+                const { data } = await supabaseClient.from('store_settings').select('id').eq('id', 1).single();
+                if (data) await supabaseClient.from('store_settings').update(updates).eq('id', 1);
+                else await supabaseClient.from('store_settings').insert([{ id: 1, ...updates }]);
+                showAlert("Sukses", "Pengaturan struk berhasil disimpan! Kasir akan menggunakan pengaturan baru ini.");
+            } catch (err) { showAlert("Error", "Gagal menyimpan pengaturan.", true); }
         }
 
-        loadPengaturan();
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadSettings();
     </script>
 </body>
 </html>
