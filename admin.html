@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Arasa Store</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
         .admin-container { max-width: 1200px; margin: auto; }
@@ -14,7 +15,6 @@
         .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; cursor: pointer; border: none; font-size: 13px; }
         .tab-link.active { background: #007bff; color: white; }
         
-        /* Layout Grid */
         .grid-global { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
         .card-global { padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; color: white; }
         .bg-primary { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
@@ -30,8 +30,8 @@
         
         .btn-hapus { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
         .btn-hapus:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-detail { background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         
-        /* Tab Content */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
     </style>
@@ -74,15 +74,39 @@
         <div id="sec-monitoring" class="tab-content">
             <div class="section-box" style="margin-bottom: 20px;">
                 <h3 style="margin-top:0; text-align:center; color:#333;">📊 Performa Antar Cabang (Omset Hari Ini)</h3>
-                <div style="width: 100%; max-width: 800px; margin: auto; height: 300px;">
-                    <canvas id="chartPerforma"></canvas>
-                </div>
+                <div style="width: 100%; max-width: 800px; margin: auto; height: 300px;"><canvas id="chartPerforma"></canvas></div>
             </div>
 
             <div class="grid-global" id="monitoring-cards">
                 </div>
-        </div>
 
+            <div id="monitoring-detail" class="section-box" style="display: none; margin-top: 20px; border: 2px solid #007bff;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 id="mon-detail-title" style="margin:0; color:#007bff;">Detail Transaksi: -</h3>
+                    <button onclick="document.getElementById('monitoring-detail').style.display='none'" class="btn-hapus" style="background:#6c757d; font-size:13px;">Tutup Rincian</button>
+                </div>
+                
+                <div style="display: flex; gap: 15px; margin-top: 15px; margin-bottom: 15px;">
+                    <div style="flex:1; background:#e0f7fa; padding:15px; border-radius:5px; text-align:center;">
+                        <span style="color:#006064; font-size:12px;">Total Transaksi</span><br>
+                        <b id="mon-detail-qty" style="font-size:24px; color:#00838f;">0</b>
+                    </div>
+                    <div style="flex:1; background:#e8f5e9; padding:15px; border-radius:5px; text-align:center;">
+                        <span style="color:#1b5e20; font-size:12px;">Total Pemasukan (Omset)</span><br>
+                        <b id="mon-detail-omset" style="font-size:24px; color:#2e7d32;">Rp 0</b>
+                    </div>
+                    <div style="flex:1; background:#ffebee; padding:15px; border-radius:5px; text-align:center;">
+                        <span style="color:#b71c1c; font-size:12px;">Total Uang Keluar (Kasbon)</span><br>
+                        <b id="mon-detail-out" style="font-size:20px; color:#c62828;">Rp 0</b>
+                    </div>
+                </div>
+
+                <table>
+                    <thead><tr><th>Waktu</th><th>No. Nota</th><th>Nama Kasir</th><th>Status</th><th>Total (Rp)</th></tr></thead>
+                    <tbody id="mon-detail-list"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -91,8 +115,8 @@
         const myRole = (localStorage.getItem('userRole') || '').toLowerCase().trim();
         const myBranch = localStorage.getItem('userBranch') || 'Pusat';
         let chartInstance = null;
+        let globalMonTrx = { 'Pusat': [], 'Gatoel': [], 'Stasiun': [] };
 
-        // Proteksi & Tampilan Awal
         if (myRole !== 'admin_pusat' && myRole !== 'admin_cabang' && myRole !== 'admin') {
             window.location.href = 'login.html';
         }
@@ -108,7 +132,6 @@
             document.getElementById('title-dashboard').innerText = `Ringkasan Omset LOKAL (Arasa ${myBranch})`;
         }
 
-        // Fungsi Switch Tab
         function switchTab(secId, btnElem) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
@@ -116,9 +139,7 @@
             btnElem.classList.add('active');
         }
 
-        // Fungsi Load Data Induk
         async function loadData() {
-            // Ambil SEMUA transaksi lunas
             const { data, error } = await supabaseClient.from('transactions').select('*').eq('status', 'paid').order('created_at', { ascending: false });
             if (error || !data) return;
 
@@ -128,69 +149,64 @@
             const firstday = new Date(curr.setDate(curr.getDate() - curr.getDay() + 1)).toISOString().split('T')[0];
             const lastday = new Date(curr.setDate(curr.getDate() - curr.getDay() + 7)).toISOString().split('T')[0];
 
-            let dHari = 0, dMinggu = 0, dBulan = 0; // Untuk Dashboard Utama
-            let listDashboardTrx = []; // Tabel Dashboard
+            let dHari = 0, dMinggu = 0, dBulan = 0; 
+            let listDashboardTrx = []; 
 
-            // Data untuk Monitoring Pusat
             let monData = {
                 'Pusat': { hari: 0, minggu: 0, bulan: 0 },
                 'Gatoel': { hari: 0, minggu: 0, bulan: 0 },
                 'Stasiun': { hari: 0, minggu: 0, bulan: 0 }
             };
 
+            // Reset laci penyimpanan rincian tiap di-load
+            globalMonTrx = { 'Pusat': [], 'Gatoel': [], 'Stasiun': [] };
+
             data.forEach(t => {
                 let tgl = t.booking_date || t.created_at.split('T')[0];
                 let cbg = t.branch || 'Pusat';
                 
-                // Jika Admin Cabang, HANYA hitung omset cabangnya sendiri
                 if (myRole === 'admin_cabang' && cbg !== myBranch) return;
 
-                // Hitungan Dashboard (Bisa Global, Bisa Lokal)
+                // Tabungan Data Dashboard
                 if (tgl === today) dHari += t.total_amount;
                 if (tgl >= firstday && tgl <= lastday) dMinggu += t.total_amount;
                 if (tgl.startsWith(thisMonth)) dBulan += t.total_amount;
-                
-                // Simpan 50 transaksi terakhir untuk tabel dashboard
                 if (listDashboardTrx.length < 50) listDashboardTrx.push(t);
 
-                // Hitungan Monitoring Pusat (Pilah per cabang)
+                // Tabungan Data Monitoring & Panel Detail (Hari Ini Saja Untuk Rincian)
                 if (monData[cbg]) {
                     if (tgl === today) monData[cbg].hari += t.total_amount;
                     if (tgl >= firstday && tgl <= lastday) monData[cbg].minggu += t.total_amount;
                     if (tgl.startsWith(thisMonth)) monData[cbg].bulan += t.total_amount;
+                    
+                    if (tgl === today) {
+                        globalMonTrx[cbg].push(t);
+                    }
                 }
             });
 
-            // 1. Render Dashboard Utama
+            // 1. Render Dashboard
             document.getElementById('dash-hari').innerText = `Rp ${dHari.toLocaleString('id-ID')}`;
             document.getElementById('dash-minggu').innerText = `Rp ${dMinggu.toLocaleString('id-ID')}`;
             document.getElementById('dash-bulan').innerText = `Rp ${dBulan.toLocaleString('id-ID')}`;
 
-            const tbodyDash = document.getElementById('dash-list-trx');
-            tbodyDash.innerHTML = '';
+            const tbodyDash = document.getElementById('dash-list-trx'); tbodyDash.innerHTML = '';
             listDashboardTrx.forEach(t => {
-                // LOGIKA HAPUS: Pusat hanya bisa hapus Pusat. Cabang hanya bisa hapus Cabangnya.
                 let tCbg = t.branch || 'Pusat';
                 let bisaHapus = false;
-                if ((myRole === 'admin_pusat' || myRole === 'admin') && tCbg === 'Pusat') bisaHapus = true;
+                
+                // DEWA BISA HAPUS SEMUA DI DASHBOARD
+                if (myRole === 'admin_pusat' || myRole === 'admin') bisaHapus = true;
                 if (myRole === 'admin_cabang' && tCbg === myBranch) bisaHapus = true;
 
                 let btnHapus = bisaHapus 
-                    ? `<button class="btn-hapus" onclick="hapusTrx('${t.id}', '${t.receipt_no}')">Hapus</button>` 
-                    : `<button class="btn-hapus" disabled title="Beda Cabang">Beda Cabang</button>`;
+                    ? `<button class="btn-hapus" onclick="hapusTrx('${t.id}', '${t.receipt_no}')">🗑️ Hapus</button>` 
+                    : `<button class="btn-hapus" disabled style="background:#aaa;">Terkunci</button>`;
 
-                tbodyDash.innerHTML += `
-                    <tr>
-                        <td>${new Date(t.created_at).toLocaleString('id-ID')}</td>
-                        <td style="font-family:monospace;">${t.receipt_no}</td>
-                        <td>${t.customer_name || 'Kasir'}</td>
-                        <td style="color:#d35400; font-weight:bold;">${tCbg}</td>
-                        <td><strong>Rp ${t.total_amount.toLocaleString('id-ID')}</strong></td>
-                        <td>${btnHapus}</td>
-                    </tr>`;
+                tbodyDash.innerHTML += `<tr><td>${new Date(t.created_at).toLocaleString('id-ID')}</td><td style="font-family:monospace;">${t.receipt_no}</td><td>${t.customer_name || 'Kasir'}</td><td style="color:#d35400; font-weight:bold;">${tCbg}</td><td><strong>Rp ${t.total_amount.toLocaleString('id-ID')}</strong></td><td>${btnHapus}</td></tr>`;
             });
 
-            // 2. Render Monitoring (Jika Admin Pusat)
+            // 2. Render Monitoring Dewa
             if (myRole === 'admin_pusat' || myRole === 'admin') {
                 renderMonitoringCards(monData);
                 renderChart(monData);
@@ -198,12 +214,10 @@
         }
 
         function renderMonitoringCards(monData) {
-            const container = document.getElementById('monitoring-cards');
-            container.innerHTML = '';
-            
+            const container = document.getElementById('monitoring-cards'); container.innerHTML = '';
             for (let cbg in monData) {
                 container.innerHTML += `
-                    <div style="background:white; border:2px solid #eee; border-radius:8px; padding:20px; text-align:center;">
+                    <div style="background:white; border:2px solid #eee; border-radius:8px; padding:20px; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
                         <h3 style="margin:0; color:#007bff; font-size:18px;">📍 Arasa ${cbg}</h3>
                         <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
                         <p style="margin:5px 0; color:#666; font-size:12px;">Harian:</p>
@@ -212,15 +226,37 @@
                             <div>Minggu:<br><b>Rp ${monData[cbg].minggu.toLocaleString('id-ID')}</b></div>
                             <div>Bulan:<br><b>Rp ${monData[cbg].bulan.toLocaleString('id-ID')}</b></div>
                         </div>
-                    </div>
-                `;
+                        <button class="btn-detail" onclick="bukaRincianCabang('${cbg}')">🔍 Lihat Rincian</button>
+                    </div>`;
             }
+        }
+
+        // FUNGSI LACI DETAIL (READ-ONLY)
+        window.bukaRincianCabang = function(cbg) {
+            document.getElementById('mon-detail-title').innerText = `Rincian Transaksi: Arasa ${cbg} (Hari Ini)`;
+            const trxs = globalMonTrx[cbg] || [];
+            
+            document.getElementById('mon-detail-qty').innerText = trxs.length;
+            let omset = trxs.reduce((sum, t) => sum + t.total_amount, 0);
+            document.getElementById('mon-detail-omset').innerText = `Rp ${omset.toLocaleString('id-ID')}`;
+            document.getElementById('mon-detail-out').innerText = `Rp 0`; // Placeholder uang keluar
+            
+            const tbody = document.getElementById('mon-detail-list'); tbody.innerHTML = '';
+            if(trxs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Belum ada transaksi hari ini di cabang ini.</td></tr>';
+            } else {
+                trxs.forEach(t => {
+                    tbody.innerHTML += `<tr><td>${new Date(t.created_at).toLocaleTimeString('id-ID')}</td><td style="font-family:monospace;">${t.receipt_no}</td><td>${t.customer_name || 'Kasir'}</td><td><span style="color:green; font-weight:bold;">Selesai</span></td><td><strong>Rp ${t.total_amount.toLocaleString('id-ID')}</strong></td></tr>`;
+                });
+            }
+            
+            document.getElementById('monitoring-detail').style.display = 'block';
+            document.getElementById('monitoring-detail').scrollIntoView({behavior: 'smooth'});
         }
 
         function renderChart(monData) {
             const ctx = document.getElementById('chartPerforma').getContext('2d');
-            if(chartInstance) chartInstance.destroy(); // Hapus chart lama kalau refresh
-
+            if(chartInstance) chartInstance.destroy(); 
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -230,26 +266,34 @@
                         data: [monData['Pusat'].hari, monData['Gatoel'].hari, monData['Stasiun'].hari],
                         backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 159, 64, 0.7)', 'rgba(75, 192, 192, 0.7)'],
                         borderColor: ['rgb(54, 162, 235)', 'rgb(255, 159, 64)', 'rgb(75, 192, 192)'],
-                        borderWidth: 2,
-                        borderRadius: 5
+                        borderWidth: 2, borderRadius: 5
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
             });
         }
 
+        // FUNGSI HAPUS YANG SUDAH DITEMBUSKAN RELASINYA
         async function hapusTrx(id, nota) {
             if(!confirm(`PERINGATAN!\nAnda yakin ingin membatalkan dan menghapus nota ${nota} secara permanen?\n\n(Tindakan ini tidak bisa dibatalkan)`)) return;
             try {
+                // 1. Hapus KDS (Antrean Dapur) dulu agar tidak nyangkut (Constraint)
+                await supabaseClient.from('kds_queue').delete().eq('transaction_id', id);
+                // 2. Hapus Rincian Item Keranjang
                 await supabaseClient.from('transaction_items').delete().eq('transaction_id', id);
-                await supabaseClient.from('transactions').delete().eq('id', id);
-                alert("Transaksi berhasil dihapus.");
-                loadData(); // Refresh ulang layar
-            } catch (err) { alert("Gagal menghapus transaksi."); }
+                // 3. Hapus Induk Transaksi
+                const { error } = await supabaseClient.from('transactions').delete().eq('id', id);
+                if(error) throw error;
+                
+                alert("Transaksi berhasil dihapus ke akar-akarnya.");
+                loadData(); 
+            } catch (err) { 
+                alert("Gagal menghapus transaksi. Hubungi Joko!"); 
+                console.error(err); 
+            }
         }
 
         function logout() { localStorage.clear(); window.location.href = 'login.html'; }
-
         loadData();
     </script>
 </body>
