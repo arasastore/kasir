@@ -5,33 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - Arasa Store</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { margin: 0; padding: 15px; background-color: #f4f4f9; color: #333; font-size: 13px; }
         .admin-container { max-width: 1200px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid #ddd; }
-        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; }
+        .tab-link { padding: 10px 20px; text-decoration: none; background: #eee; border-radius: 6px 6px 0 0; font-weight: bold; color: #555; cursor: pointer; border: none; font-size: 13px; }
         .tab-link.active { background: #007bff; color: white; }
         
-        /* Card Global Omzet */
+        /* Layout Grid */
         .grid-global { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .card-global { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); text-align: center; }
-        .card-global h3 { margin: 0 0 10px 0; font-size: 16px; color: #d0e1ff; }
-        .card-global h1 { margin: 0; font-size: 32px; }
+        .card-global { padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; color: white; }
+        .bg-primary { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .bg-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .bg-warning { background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%); color: #333; }
+        .card-global h3 { margin: 0 0 10px 0; font-size: 15px; opacity: 0.9; }
+        .card-global h1 { margin: 0; font-size: 30px; }
 
-        /* Card Cabang */
         .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; }
-        .grid-branch { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .card-branch { background: #fff; border: 2px solid #eee; padding: 15px; border-radius: 8px; text-align: center; transition: 0.2s; }
-        .card-branch:hover { border-color: #007bff; transform: translateY(-2px); }
-        .card-branch h3 { margin: 0 0 5px 0; color: #333; }
-        .card-branch h2 { margin: 0 0 15px 0; color: #28a745; }
-        .btn-detail { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
         th { background: #f8f9fa; }
+        
+        .btn-hapus { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-hapus:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Tab Content */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
@@ -39,36 +41,48 @@
         <div class="header">
             <div>
                 <h2 style="margin: 0;">Ruang Kendali Admin</h2>
-                <small id="txt-role-branch" style="color: #666; font-weight: bold;"></small>
+                <small id="txt-role-branch" style="color: #007bff; font-weight: bold; font-size: 14px;"></small>
             </div>
             <button onclick="logout()" style="background: #dc3545; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer;">Logout</button>
         </div>
 
         <div class="tabs">
-            <a href="admin.html" class="tab-link active">📊 Dashboard & Omzet</a>
-            <a href="admin_menu.html" class="tab-link" id="nav-menu">🍔 Manajemen Menu</a>
-            <a href="admin_akun.html" class="tab-link" id="nav-akun">👥 Manajemen Akun</a>
-            <a href="admin_setting.html" class="tab-link" id="nav-setting">⚙️ Pengaturan</a>
+            <button class="tab-link active" onclick="switchTab('sec-dashboard', this)">📊 Dashboard Utama</button>
+            <button class="tab-link" id="nav-monitoring" onclick="switchTab('sec-monitoring', this)" style="display: none; background:#e0f7fa; color:#006064;">📈 Monitoring Omset (Pusat)</button>
+            <button class="tab-link" onclick="window.location.href='admin_menu.html'">🍔 Manajemen Menu</button>
+            <button class="tab-link" id="nav-akun" onclick="window.location.href='admin_akun.html'" style="display: none;">👥 Manajemen Akun</button>
+            <button class="tab-link" onclick="window.location.href='admin_setting.html'">⚙️ Pengaturan</button>
         </div>
 
-        <div id="global-stats" class="grid-global" style="display: none;">
-            <div class="card-global"><h3>🌍 Omzet Global (Hari Ini)</h3><h1 id="glob-hari">Rp 0</h1></div>
-            <div class="card-global"><h3>🌍 Omzet Global (Minggu Ini)</h3><h1 id="glob-minggu">Rp 0</h1></div>
-            <div class="card-global"><h3>🌍 Omzet Global (Bulan Ini)</h3><h1 id="glob-bulan">Rp 0</h1></div>
+        <div id="sec-dashboard" class="tab-content active">
+            <h3 style="margin-top: 0;" id="title-dashboard">Ringkasan Omset</h3>
+            <div class="grid-global">
+                <div class="card-global bg-primary"><h3>Omset Hari Ini</h3><h1 id="dash-hari">Rp 0</h1></div>
+                <div class="card-global bg-success"><h3>Omset Minggu Ini</h3><h1 id="dash-minggu">Rp 0</h1></div>
+                <div class="card-global bg-warning"><h3>Omset Bulan Ini</h3><h1 id="dash-bulan">Rp 0</h1></div>
+            </div>
+
+            <div class="section-box">
+                <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Riwayat Transaksi Terbaru</h3>
+                <table>
+                    <thead><tr><th>Waktu</th><th>No. Nota</th><th>Kasir</th><th>Cabang</th><th>Total (Rp)</th><th>Aksi</th></tr></thead>
+                    <tbody id="dash-list-trx"><tr><td colspan="6" style="text-align:center;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="section-box">
-            <h3 style="margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px;">Monitor Performa Cabang (Hari Ini)</h3>
-            <div id="branch-list" class="grid-branch"><p>Memuat data cabang...</p></div>
+        <div id="sec-monitoring" class="tab-content">
+            <div class="section-box" style="margin-bottom: 20px;">
+                <h3 style="margin-top:0; text-align:center; color:#333;">📊 Performa Antar Cabang (Omset Hari Ini)</h3>
+                <div style="width: 100%; max-width: 800px; margin: auto; height: 300px;">
+                    <canvas id="chartPerforma"></canvas>
+                </div>
+            </div>
+
+            <div class="grid-global" id="monitoring-cards">
+                </div>
         </div>
 
-        <div class="section-box" id="detail-section" style="display: none;">
-            <h3 style="margin-top: 0;" id="judul-detail">Detail Transaksi Cabang</h3>
-            <table>
-                <thead><tr><th>Waktu</th><th>No. Nota</th><th>Nama Kasir</th><th>Status</th><th>Total (Rp)</th></tr></thead>
-                <tbody id="detail-list"></tbody>
-            </table>
-        </div>
     </div>
 
     <script>
@@ -76,110 +90,167 @@
         
         const myRole = (localStorage.getItem('userRole') || '').toLowerCase().trim();
         const myBranch = localStorage.getItem('userBranch') || 'Pusat';
+        let chartInstance = null;
 
-        // KEAMANAN KEBAL CACHE LAMA
+        // Proteksi & Tampilan Awal
         if (myRole !== 'admin_pusat' && myRole !== 'admin_cabang' && myRole !== 'admin') {
             window.location.href = 'login.html';
         }
         
-        // Tampilkan teks peran dengan benar
-        let displayRole = myRole === 'admin' ? 'admin_pusat' : myRole;
-        document.getElementById('txt-role-branch').innerText = `Role: ${displayRole.toUpperCase()} | Cabang: ${myBranch.toUpperCase()}`;
+        let displayRole = (myRole === 'admin' || myRole === 'admin_pusat') ? 'Admin Pusat' : 'Admin Cabang';
+        document.getElementById('txt-role-branch').innerText = `Akses: ${displayRole.toUpperCase()} | Lokasi: Arasa ${myBranch.toUpperCase()}`;
 
-        if (myRole === 'admin_cabang') {
-            document.getElementById('nav-menu').style.display = 'none';
-            document.getElementById('nav-akun').style.display = 'none';
-            document.getElementById('nav-setting').style.display = 'none';
-        } else {
-            // DEWA: Buka semua gembok
-            document.getElementById('nav-menu').style.display = 'inline-block';
+        if (myRole === 'admin_pusat' || myRole === 'admin') {
+            document.getElementById('nav-monitoring').style.display = 'inline-block';
             document.getElementById('nav-akun').style.display = 'inline-block';
-            document.getElementById('nav-setting').style.display = 'inline-block';
-            document.getElementById('global-stats').style.display = 'grid'; 
+            document.getElementById('title-dashboard').innerText = "Ringkasan Omset GLOBAL (Seluruh Cabang)";
+        } else {
+            document.getElementById('title-dashboard').innerText = `Ringkasan Omset LOKAL (Arasa ${myBranch})`;
         }
 
-        async function loadDashboardData() {
-            let query = supabaseClient.from('transactions').select('total_amount, booking_date, branch, created_at, receipt_no, status').eq('status', 'paid');
-            
-            if (myRole === 'admin_cabang') { query = query.eq('branch', myBranch); }
+        // Fungsi Switch Tab
+        function switchTab(secId, btnElem) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(secId).classList.add('active');
+            btnElem.classList.add('active');
+        }
 
-            const { data, error } = await query;
+        // Fungsi Load Data Induk
+        async function loadData() {
+            // Ambil SEMUA transaksi lunas
+            const { data, error } = await supabaseClient.from('transactions').select('*').eq('status', 'paid').order('created_at', { ascending: false });
             if (error || !data) return;
 
             const today = new Date().toISOString().split('T')[0];
             const thisMonth = today.slice(0, 7); 
-            
             const curr = new Date();
             const firstday = new Date(curr.setDate(curr.getDate() - curr.getDay() + 1)).toISOString().split('T')[0];
             const lastday = new Date(curr.setDate(curr.getDate() - curr.getDay() + 7)).toISOString().split('T')[0];
 
-            let gHari = 0, gMinggu = 0, gBulan = 0;
-            let branchData = {}; 
+            let dHari = 0, dMinggu = 0, dBulan = 0; // Untuk Dashboard Utama
+            let listDashboardTrx = []; // Tabel Dashboard
+
+            // Data untuk Monitoring Pusat
+            let monData = {
+                'Pusat': { hari: 0, minggu: 0, bulan: 0 },
+                'Gatoel': { hari: 0, minggu: 0, bulan: 0 },
+                'Stasiun': { hari: 0, minggu: 0, bulan: 0 }
+            };
 
             data.forEach(t => {
                 let tgl = t.booking_date || t.created_at.split('T')[0];
-                let cabang = t.branch || 'Pusat';
+                let cbg = t.branch || 'Pusat';
+                
+                // Jika Admin Cabang, HANYA hitung omset cabangnya sendiri
+                if (myRole === 'admin_cabang' && cbg !== myBranch) return;
 
-                if (tgl === today) gHari += t.total_amount;
-                if (tgl >= firstday && tgl <= lastday) gMinggu += t.total_amount;
-                if (tgl.startsWith(thisMonth)) gBulan += t.total_amount;
+                // Hitungan Dashboard (Bisa Global, Bisa Lokal)
+                if (tgl === today) dHari += t.total_amount;
+                if (tgl >= firstday && tgl <= lastday) dMinggu += t.total_amount;
+                if (tgl.startsWith(thisMonth)) dBulan += t.total_amount;
+                
+                // Simpan 50 transaksi terakhir untuk tabel dashboard
+                if (listDashboardTrx.length < 50) listDashboardTrx.push(t);
 
-                if (tgl === today) {
-                    if (!branchData[cabang]) branchData[cabang] = { total: 0, trxs: [] };
-                    branchData[cabang].total += t.total_amount;
-                    branchData[cabang].trxs.push(t);
+                // Hitungan Monitoring Pusat (Pilah per cabang)
+                if (monData[cbg]) {
+                    if (tgl === today) monData[cbg].hari += t.total_amount;
+                    if (tgl >= firstday && tgl <= lastday) monData[cbg].minggu += t.total_amount;
+                    if (tgl.startsWith(thisMonth)) monData[cbg].bulan += t.total_amount;
                 }
             });
 
-            if (myRole === 'admin_pusat' || myRole === 'admin') {
-                document.getElementById('glob-hari').innerText = `Rp ${gHari.toLocaleString('id-ID')}`;
-                document.getElementById('glob-minggu').innerText = `Rp ${gMinggu.toLocaleString('id-ID')}`;
-                document.getElementById('glob-bulan').innerText = `Rp ${gBulan.toLocaleString('id-ID')}`;
-            }
+            // 1. Render Dashboard Utama
+            document.getElementById('dash-hari').innerText = `Rp ${dHari.toLocaleString('id-ID')}`;
+            document.getElementById('dash-minggu').innerText = `Rp ${dMinggu.toLocaleString('id-ID')}`;
+            document.getElementById('dash-bulan').innerText = `Rp ${dBulan.toLocaleString('id-ID')}`;
 
-            const blist = document.getElementById('branch-list');
-            blist.innerHTML = '';
-            
-            if (Object.keys(branchData).length === 0) { blist.innerHTML = '<p>Belum ada omzet hari ini.</p>'; }
+            const tbodyDash = document.getElementById('dash-list-trx');
+            tbodyDash.innerHTML = '';
+            listDashboardTrx.forEach(t => {
+                // LOGIKA HAPUS: Pusat hanya bisa hapus Pusat. Cabang hanya bisa hapus Cabangnya.
+                let tCbg = t.branch || 'Pusat';
+                let bisaHapus = false;
+                if ((myRole === 'admin_pusat' || myRole === 'admin') && tCbg === 'Pusat') bisaHapus = true;
+                if (myRole === 'admin_cabang' && tCbg === myBranch) bisaHapus = true;
 
-            for (const [namaCabang, info] of Object.entries(branchData)) {
-                const trxDataStr = encodeURIComponent(JSON.stringify(info.trxs));
-                blist.innerHTML += `
-                    <div class="card-branch">
-                        <h3>📍 Cabang ${namaCabang}</h3>
-                        <h2>Rp ${info.total.toLocaleString('id-ID')}</h2>
-                        <button class="btn-detail" onclick="lihatDetail('${namaCabang}', '${trxDataStr}')">🔍 Lihat Rincian</button>
-                    </div>`;
-            }
-        }
+                let btnHapus = bisaHapus 
+                    ? `<button class="btn-hapus" onclick="hapusTrx('${t.id}', '${t.receipt_no}')">Hapus</button>` 
+                    : `<button class="btn-hapus" disabled title="Beda Cabang">Beda Cabang</button>`;
 
-        function lihatDetail(namaCabang, trxDataStr) {
-            const trxs = JSON.parse(decodeURIComponent(trxDataStr));
-            document.getElementById('judul-detail').innerText = `Rincian Transaksi - Cabang ${namaCabang} (Hari Ini)`;
-            
-            const tbody = document.getElementById('detail-list'); tbody.innerHTML = '';
-            trxs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-            trxs.forEach(t => {
-                tbody.innerHTML += `
+                tbodyDash.innerHTML += `
                     <tr>
-                        <td>${new Date(t.created_at).toLocaleTimeString('id-ID')}</td>
-                        <td style="font-family: monospace;">${t.receipt_no}</td>
-                        <td>Kasir ${t.branch}</td>
-                        <td><span style="color:green; font-weight:bold;">LUNAS</span></td>
+                        <td>${new Date(t.created_at).toLocaleString('id-ID')}</td>
+                        <td style="font-family:monospace;">${t.receipt_no}</td>
+                        <td>${t.customer_name || 'Kasir'}</td>
+                        <td style="color:#d35400; font-weight:bold;">${tCbg}</td>
                         <td><strong>Rp ${t.total_amount.toLocaleString('id-ID')}</strong></td>
+                        <td>${btnHapus}</td>
                     </tr>`;
             });
-            document.getElementById('detail-section').style.display = 'block';
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+            // 2. Render Monitoring (Jika Admin Pusat)
+            if (myRole === 'admin_pusat' || myRole === 'admin') {
+                renderMonitoringCards(monData);
+                renderChart(monData);
+            }
         }
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
+        function renderMonitoringCards(monData) {
+            const container = document.getElementById('monitoring-cards');
+            container.innerHTML = '';
+            
+            for (let cbg in monData) {
+                container.innerHTML += `
+                    <div style="background:white; border:2px solid #eee; border-radius:8px; padding:20px; text-align:center;">
+                        <h3 style="margin:0; color:#007bff; font-size:18px;">📍 Arasa ${cbg}</h3>
+                        <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                        <p style="margin:5px 0; color:#666; font-size:12px;">Harian:</p>
+                        <h2 style="margin:0 0 10px 0; color:#28a745;">Rp ${monData[cbg].hari.toLocaleString('id-ID')}</h2>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; background:#f8f9fa; padding:10px; border-radius:5px;">
+                            <div>Minggu:<br><b>Rp ${monData[cbg].minggu.toLocaleString('id-ID')}</b></div>
+                            <div>Bulan:<br><b>Rp ${monData[cbg].bulan.toLocaleString('id-ID')}</b></div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
-        loadDashboardData();
+        function renderChart(monData) {
+            const ctx = document.getElementById('chartPerforma').getContext('2d');
+            if(chartInstance) chartInstance.destroy(); // Hapus chart lama kalau refresh
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Pusat', 'Gatoel', 'Stasiun'],
+                    datasets: [{
+                        label: 'Omset Hari Ini (Rp)',
+                        data: [monData['Pusat'].hari, monData['Gatoel'].hari, monData['Stasiun'].hari],
+                        backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 159, 64, 0.7)', 'rgba(75, 192, 192, 0.7)'],
+                        borderColor: ['rgb(54, 162, 235)', 'rgb(255, 159, 64)', 'rgb(75, 192, 192)'],
+                        borderWidth: 2,
+                        borderRadius: 5
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        async function hapusTrx(id, nota) {
+            if(!confirm(`PERINGATAN!\nAnda yakin ingin membatalkan dan menghapus nota ${nota} secara permanen?\n\n(Tindakan ini tidak bisa dibatalkan)`)) return;
+            try {
+                await supabaseClient.from('transaction_items').delete().eq('transaction_id', id);
+                await supabaseClient.from('transactions').delete().eq('id', id);
+                alert("Transaksi berhasil dihapus.");
+                loadData(); // Refresh ulang layar
+            } catch (err) { alert("Gagal menghapus transaksi."); }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        loadData();
     </script>
 </body>
 </html>
