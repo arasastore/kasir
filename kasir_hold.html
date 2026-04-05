@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hold Tagihan - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .card { background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-info { background: #0288d1; color: #ffffff; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; vertical-align: top; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: #ffffff; padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .input-nominal { width: 100%; padding: 16px; font-size: 22px; text-align: center; font-weight: 700; border: 1px solid #dcdcdc; border-radius: 10px; margin-bottom: 15px; outline: none; }
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn { width: 100%; } }
+        
+        /* CSS KHUSUS PRINTER */
+        @media print { body * { visibility: hidden; margin: 0; padding: 0; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 58mm; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: black; padding: 5px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h2>Daftar Hold Tagihan</h2>
+            <span class="header-subtitle">Manajemen transaksi tertunda</span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="btn btn-outline">Kembali ke Kasir</button>
+    </div>
+
+    <div class="nav-tabs">
+        <a href="index.html">Kasir Utama</a>
+        <a href="kasir_waiting.html">Antrean KDS</a>
+        <a href="kasir_hold.html" class="active">Hold Tagihan</a>
+        <a href="kasir_booking.html">Booking</a>
+        <a href="kasir_order.html">Order Pusat</a>
+        <a href="kasir_riwayat.html">Riwayat</a>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>No. Referensi</th><th>Pelanggan</th><th>Detail Pesanan</th><th>Total Tagihan</th><th>Aksi Eksekusi</th></tr></thead>
+                <tbody id="hold-list"><tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Memuat data...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalTipeBayar" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom:15px;">Pelunasan Tagihan</h2><p style="color:#6e6e6e; margin-bottom:5px;">Total Tagihan Hold</p><h3 style="font-size: 28px; color:#8b1a1a; margin-bottom:25px;" id="teks-total-modal">Rp 0</h3><div style="display:flex; gap:10px; margin-bottom: 15px;"><button class="btn btn-primary" style="flex:1; padding:15px;" onclick="bukaModalCash()">Tunai (Cash)</button><button class="btn btn-info" style="flex:1; padding:15px;" onclick="prosesPelunasan('Non-Cash')">Non-Tunai</button></div><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalTipeBayar').style.display='none'">Batal</button></div></div>
+    
+    <div id="modalCash" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom:15px;">Penerimaan Tunai</h2><p style="color:#6e6e6e; margin-bottom:5px;">Tagihan: <strong style="color:#1a1a1a;" id="teks-total-cash">Rp 0</strong></p><input type="number" id="input-uang-pas" class="input-nominal" placeholder="Nominal Uang" onkeyup="hitungKembalian()" style="margin-top:15px;"><div style="background:#fafafa; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #eeeeee;"><span style="font-size:12px; color:#6e6e6e; font-weight:700; text-transform:uppercase;">Kembalian</span><h3 id="teks-kembalian" style="color: #2e7d32; margin: 5px 0 0 0; font-size:24px;">Rp 0</h3></div><button id="btn-konfirm-cash" class="btn btn-primary" style="width:100%; margin-bottom:10px; padding:15px;" onclick="prosesPelunasan('Cash')" disabled>Konfirmasi Lunas & Cetak</button><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalCash').style.display='none'">Kembali</button></div></div>
+    
+    <div id="modalSukses" class="web-modal"><div class="web-modal-content"><div style="width:80px; height:80px; background:#d4edda; color:#155724; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:40px; font-weight:bold; margin:0 auto 20px auto;">✓</div><h2 id="judul-sukses" style="color:#1a1a1a; margin-bottom:15px;">Pelunasan Berhasil</h2><p id="pesan-sukses" style="color: #6e6e6e; font-size: 14px; white-space: pre-wrap; line-height:1.6; margin-bottom:25px; background:#fafafa; padding:15px; border-radius:8px; text-align:left;"></p><button class="btn btn-primary" style="width:100%;" onclick="tutupSemuaDanReload()">Selesai</button></div></div>
+
+    <div id="print-area" class="print-area" style="display: none;"></div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        let globalTrxId = null; let globalReceiptNo = null; let globalTotal = 0; let globalItems = []; let globalCustName = '';
+
+        async function loadHold() {
+            const { data, error } = await supabaseClient.from('transactions').select('id, receipt_no, customer_name, total_amount, transaction_items(qty, price, product_id, products(name, type, stock))').eq('status', 'hold').order('created_at', { ascending: false });
+            const tbody = document.getElementById('hold-list'); tbody.innerHTML = '';
+            if (error || !data || data.length === 0) return tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Aman. Tidak ada transaksi berstatus Hold.</td></tr>';
+
+            data.forEach(trx => {
+                const itemsData = encodeURIComponent(JSON.stringify(trx.transaction_items));
+                const cust = trx.customer_name || 'Umum';
+                
+                // MENGURAI DETAIL PESANAN
+                let itemsHtml = trx.transaction_items.map(i => 
+                    `<span style="display:block; margin-bottom:4px; font-size:13px; color:#4a4a4a;">• <strong style="color:#1a1a1a;">${i.qty}x</strong> ${i.products.name}</span>`
+                ).join('');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-family: monospace; font-weight:700; color:#1a1a1a;">${trx.receipt_no}</td>
+                        <td style="font-weight:600;">${cust}</td>
+                        <td>${itemsHtml}</td>
+                        <td style="color: #8b1a1a; font-weight: 700; font-size:15px;">Rp ${trx.total_amount.toLocaleString('id-ID')}</td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:8px; width: 120px;">
+                                <button onclick="siapkanPelunasan('${trx.id}', '${trx.receipt_no}', ${trx.total_amount}, '${itemsData}', '${cust}')" class="btn btn-primary" style="padding:10px 12px; font-size:12px;">Bayar Lunas</button>
+                                <button onclick="window.location.href='index.html?edit_hold=${trx.id}'" class="btn btn-outline" style="padding:10px 12px; font-size:12px;">Edit Order</button>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        function siapkanPelunasan(id, nota, total, itemsStr, custName) {
+            globalTrxId = id; globalReceiptNo = nota; globalTotal = total; globalItems = JSON.parse(decodeURIComponent(itemsStr)); globalCustName = custName;
+            document.getElementById('teks-total-modal').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            document.getElementById('modalTipeBayar').style.display = 'flex';
+        }
+
+        function bukaModalCash() {
+            document.getElementById('modalTipeBayar').style.display = 'none';
+            document.getElementById('teks-total-cash').innerText = `Rp ${globalTotal.toLocaleString('id-ID')}`;
+            document.getElementById('input-uang-pas').value = '';
+            document.getElementById('teks-kembalian').innerText = 'Rp 0';
+            document.getElementById('btn-konfirm-cash').disabled = true;
+            document.getElementById('modalCash').style.display = 'flex';
+        }
+
+        function hitungKembalian() {
+            let uang = Number(document.getElementById('input-uang-pas').value);
+            let btn = document.getElementById('btn-konfirm-cash');
+            if (uang >= globalTotal) {
+                document.getElementById('teks-kembalian').innerText = `Rp ${(uang - globalTotal).toLocaleString('id-ID')}`;
+                document.getElementById('teks-kembalian').style.color = '#2e7d32'; btn.disabled = false;
+            } else {
+                document.getElementById('teks-kembalian').innerText = `Defisit Nominal`; document.getElementById('teks-kembalian').style.color = '#dc3545'; btn.disabled = true;
+            }
+        }
+
+        function cetakStrukLokal(noNota, custName, tipeBayar, total, uangCash, items) {
+            const tgl = new Date().toLocaleString('id-ID');
+            const myName = localStorage.getItem('userName') || 'Admin';
+            let strukHTML = `
+                <div style="width: 58mm; margin: 0 auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: black; padding: 5px;">
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <h2 style="margin: 0; font-size: 16px;">ARASA STORE</h2>
+                        <h3 style="margin: 2px 0; font-size: 13px; color: #333;">CABANG ${localStorage.getItem('userBranch') || 'PUSAT'}</h3>
+                        <hr style="border-top: 1px dashed black; margin: 5px 0;">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <p style="margin: 2px 0;">Nota : ${noNota}</p>
+                        <p style="margin: 2px 0;">Kasir: ${myName}</p>
+                        <p style="margin: 2px 0;">Waktu: ${tgl}</p>
+                        <p style="margin: 2px 0;">Cust : ${custName || 'Umum'}</p>
+                        <hr style="border-top: 1px dashed black; margin: 5px 0;">
+                    </div>
+                    <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 12px;">`;
+
+            items.forEach(item => { 
+                let hrg = item.price || 0;
+                strukHTML += `<tr><td colspan="3" style="padding-bottom: 2px;">${item.products.name}</td></tr><tr><td style="width: 20%; padding-bottom: 5px;">${item.qty}x</td><td style="width: 40%; padding-bottom: 5px;">${hrg.toLocaleString('id-ID')}</td><td style="width: 40%; text-align: right; padding-bottom: 5px;">${(hrg * item.qty).toLocaleString('id-ID')}</td></tr>`; 
+            });
+
+            strukHTML += `
+                    </table>
+                    <hr style="border-top: 1px dashed black; margin: 5px 0;">
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;"><span>TOTAL:</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;"><span>Bayar (${tipeBayar}):</span><span>Rp ${tipeBayar === 'Cash' ? uangCash.toLocaleString('id-ID') : total.toLocaleString('id-ID')}</span></div>`;
+            
+            if (tipeBayar === 'Cash') { strukHTML += `<div style="display: flex; justify-content: space-between;"><span>Kembali:</span><span>Rp ${(uangCash - total).toLocaleString('id-ID')}</span></div>`; }
+            
+            strukHTML += `
+                    <hr style="border-top: 1px dashed black; margin: 10px 0;">
+                    <div style="text-align: center;"><p style="margin: 0; font-size: 11px;">Terima Kasih Atas Kunjungan Anda!</p></div>
+                </div>`;
+
+            const printArea = document.getElementById('print-area'); printArea.innerHTML = strukHTML; printArea.style.display = 'block'; window.print(); printArea.style.display = 'none'; 
+        }
+
+        async function prosesPelunasan(metode) {
+            try {
+                await supabaseClient.from('transactions').update({ status: 'paid' }).eq('id', globalTrxId);
+                for (const item of globalItems) {
+                    await supabaseClient.from('products').update({ stock: item.products.stock - item.qty }).eq('id', item.product_id);
+                    await supabaseClient.from('stock_logs').insert([{ product_id: item.product_id, change_qty: -item.qty, reason: 'sales_from_hold' }]);
+                }
+
+                let uang = 0;
+                let pesan = `Referensi: ${globalReceiptNo}\nMetode: ${metode}`;
+                if(metode === 'Cash') {
+                    uang = Number(document.getElementById('input-uang-pas').value);
+                    pesan += `\nUang Diterima: Rp ${uang.toLocaleString('id-ID')}\nKembalian: Rp ${(uang - globalTotal).toLocaleString('id-ID')}`;
+                }
+                
+                // PANGGIL CETAK STRUK SEBELUM MUNCUL POPUP SUKSES
+                cetakStrukLokal(globalReceiptNo, globalCustName, metode, globalTotal, uang, globalItems);
+                
+                document.getElementById('modalTipeBayar').style.display = 'none'; document.getElementById('modalCash').style.display = 'none';
+                document.getElementById('pesan-sukses').innerText = pesan;
+                document.getElementById('modalSukses').style.display = 'flex';
+            } catch (err) { console.error(err); }
+        }
+
+        function tutupSemuaDanReload() { document.getElementById('modalSukses').style.display = 'none'; loadHold(); }
+
+        loadHold();
+    </script>
+</body>
+</html>

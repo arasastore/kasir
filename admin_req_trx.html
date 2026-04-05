@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Transaksi - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .btn-success { background: #2e7d32; color: #ffffff; }
+        .btn-success:hover { background: #1b5e20; }
+        .btn-danger { background: #ffebeb; color: #dc3545; }
+        .btn-danger:hover { background: #dc3545; color: #ffffff; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; vertical-align: middle; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        .badge-status { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .bg-pending { background: #fff3cd; color: #856404; }
+        .bg-approved { background: #d4edda; color: #155724; }
+        .bg-rejected { background: #ffebeb; color: #dc3545; }
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Persetujuan Void & Revisi Kasir</h2>
+                <span id="user-info" class="header-subtitle">Memuat data...</span>
+            </div>
+            <button onclick="logout()" class="btn btn-outline" style="border:none;">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_laporan.html">Laporan</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html" class="active">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_notif.html">Notifikasi <span id="badge-notif" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Waktu Kejadian</th><th>Lokasi Kasir</th><th>No. Struk Asli</th><th>Alasan Pembatalan</th><th>Status Pengajuan</th><th>Aksi Mahkamah</th></tr></thead>
+                    <tbody id="trx-body"><tr><td colspan="6" style="text-align:center; color:#6e6e6e;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa Global`;
+
+        async function loadReqTrx() {
+            const { data } = await supabaseClient.from('request_trx').select('*, transactions(receipt_no, total_amount)').order('created_at', { ascending: false });
+            const tbody = document.getElementById('trx-body'); tbody.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                data.forEach(req => {
+                    let statusClass = req.status === 'pending' ? 'bg-pending' : (req.status === 'approved' ? 'bg-approved' : 'bg-rejected');
+                    let lblTotal = req.transactions?.total_amount ? `<br><small style="color:#dc3545; font-weight:800;">Rp ${req.transactions.total_amount.toLocaleString('id-ID')}</small>` : '';
+                    let btnAksi = req.status === 'pending' ? 
+                        `<div style="display:flex; gap:8px;"><button onclick="prosesTrx(${req.id}, ${req.transaction_id}, 'approved', '${req.transactions?.receipt_no}')" class="btn btn-success">Setujui Void</button><button onclick="prosesTrx(${req.id}, null, 'rejected', '${req.transactions?.receipt_no}')" class="btn btn-danger">Tolak Ajuan</button></div>` 
+                        : `<span style="color:#6e6e6e; font-size:12px; font-weight:600;">Selesai Diproses</span>`;
+                    
+                    tbody.innerHTML += `<tr><td style="color:#6e6e6e;">${new Date(req.created_at).toLocaleString('id-ID')}</td><td><b style="color:#1a1a1a;">Arasa ${req.branch}</b><br><small>${req.cashier_name}</small></td><td style="font-family:monospace; font-weight:700;">${req.transactions?.receipt_no || '-'}${lblTotal}</td><td style="font-style:italic;">"${req.reason}"</td><td><span class="badge-status ${statusClass}">${req.status}</span></td><td>${btnAksi}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6e6e6e;">Tidak ada rekam jejak pengajuan pembatalan.</td></tr>'; }
+            updateBadges();
+        }
+
+        async function prosesTrx(reqId, trxId, action, receiptNo) {
+            const msg = action === 'approved' 
+                ? 'EKSEKUSI VOID MUTLAK:\n1. Omset struk ini akan jadi 0.\n2. Stok fisik akan dikembalikan ke Etalase.\n3. Uang Kas akan dipotong (Refund).\n\nLanjutkan?' 
+                : 'Tolak pengajuan pembatalan ini? Kasir tidak bisa membatalkan struk tersebut.';
+            
+            if (!confirm(msg)) return;
+
+            try {
+                if (action === 'approved' && trxId) {
+                    // Tarik Data Transaksi Lama
+                    const { data: trxOld } = await supabaseClient.from('transactions').select('total_amount, branch').eq('id', trxId).single();
+                    
+                    if (trxOld && trxOld.total_amount > 0) {
+                        // 1. Eksekusi Pengembalian Stok
+                        const { data: items } = await supabaseClient.from('transaction_items').select('product_id, qty').eq('transaction_id', trxId);
+                        if (items) {
+                            for (let item of items) {
+                                const { data: prod } = await supabaseClient.from('products').select('stock, name').eq('id', item.product_id).single();
+                                if (prod) {
+                                    await supabaseClient.from('products').update({ stock: prod.stock + item.qty }).eq('id', item.product_id);
+                                    // Log pemulihan stok
+                                    await supabaseClient.from('stock_logs').insert([{ product_id: item.product_id, change_qty: item.qty, reason: `void_refund_${trxOld.branch}` }]);
+                                }
+                            }
+                        }
+
+                        // 2. Eksekusi Pemotongan Uang Kas (Refund Void)
+                        await supabaseClient.from('buku_kas').insert([{
+                            type: 'out', amount: trxOld.total_amount, description: `Refund/Void Transaksi Cabang ${trxOld.branch} (${receiptNo})`
+                        }]);
+
+                        // 3. Hanguskan Nilai Transaksi
+                        await supabaseClient.from('transactions').update({ status: 'voided', total_amount: 0 }).eq('id', trxId);
+                        
+                        // 4. Kirim CCTV Notifikasi
+                        await supabaseClient.from('notifications').insert([{
+                            title: '✅ Void Disetujui Pusat', message: `Mahkamah Pusat telah menyetujui pembatalan struk ${receiptNo}. Stok kembali, Kas ditarik.`, is_read: false
+                        }]);
+                    }
+                } else if (action === 'rejected') {
+                    await supabaseClient.from('notifications').insert([{
+                        title: '❌ Void Ditolak Pusat', message: `Pengajuan pembatalan struk ${receiptNo} ditolak oleh Pusat.`, is_read: false
+                    }]);
+                }
+
+                // Ubah status antrean
+                await supabaseClient.from('request_trx').update({ status: action }).eq('id', reqId); 
+                alert("Eksekusi Mahkamah Selesai!"); loadReqTrx();
+            } catch(e) { alert("Kegagalan Sistem saat mengeksekusi Void."); console.error(e); }
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cNotif } = await supabaseClient.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-notif', cNotif); setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadReqTrx();
+    </script>
+</body>
+</html>

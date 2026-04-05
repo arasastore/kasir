@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buku Kas - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .summary-box { display: flex; justify-content: space-between; align-items: center; background: #fafafa; padding: 20px 25px; border-radius: 8px; border: 1px solid #eeeeee; margin-bottom: 25px; }
+        .summary-label { font-size: 15px; color: #6e6e6e; font-weight: 600; }
+        .summary-value { font-size: 24px; color: #8b1a1a; font-weight: 800; }
+        .form-row { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 30px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 200px; }
+        .form-group.large { flex: 2; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #4a4a4a; }
+        .form-control { width: 100%; padding: 12px 15px; border: 1px solid #dcdcdc; border-radius: 8px; font-size: 14px; color: #2b2b2b; transition: 0.2s; outline: none; background: #fff; }
+        .form-control:focus { border-color: #8b1a1a; box-shadow: 0 0 0 3px rgba(139, 26, 26, 0.05); }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        .text-in { color: #2e7d32; font-weight: 700; }
+        .text-out { color: #8b1a1a; font-weight: 700; }
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn { width: 100%; } .form-row { flex-direction: column; align-items: stretch; gap: 15px; } .summary-box { flex-direction: column; align-items: flex-start; gap: 10px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Buku Kas Besar</h2>
+                <span id="user-info" class="header-subtitle">Memuat data...</span>
+            </div>
+            <button onclick="logout()" class="btn btn-outline">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html" class="active">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_notif.html">Notifikasi <span id="badge-notif" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="card">
+            <div class="summary-box">
+                <span class="summary-label">Total Saldo Kas Tersedia</span>
+                <span id="total-saldo" class="summary-value">Rp 0</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Jenis Mutasi</label>
+                    <select id="kas-type" class="form-control">
+                        <option value="in">Pemasukan (+)</option>
+                        <option value="out">Pengeluaran (-)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nominal (Rp)</label>
+                    <input type="number" id="kas-amount" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group large">
+                    <label>Keterangan Transaksi</label>
+                    <input type="text" id="kas-desc" class="form-control" placeholder="Contoh: Pembelian bahan baku">
+                </div>
+                <div class="form-group">
+                    <button onclick="simpanKas()" class="btn btn-primary" style="width: 100%; height: 46px;">Catat ke Buku</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Waktu Pencatatan</th><th>Uraian Keterangan</th><th>Pemasukan Kas</th><th>Pengeluaran Kas</th></tr></thead>
+                    <tbody id="kas-body"><tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Memuat riwayat...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa ${localStorage.getItem('userBranch') || 'Pusat'}`;
+
+        async function loadKas() {
+            const { data } = await supabaseClient.from('buku_kas').select('*').order('created_at', { ascending: false });
+            const tbody = document.getElementById('kas-body'); tbody.innerHTML = '';
+            let saldo = 0;
+            if (data && data.length > 0) {
+                data.forEach(k => {
+                    const amt = Number(k.amount);
+                    if (k.type === 'in') saldo += amt; if (k.type === 'out') saldo -= amt;
+                    const inText = k.type === 'in' ? `<span class="text-in">+ Rp ${amt.toLocaleString('id-ID')}</span>` : '-';
+                    const outText = k.type === 'out' ? `<span class="text-out">- Rp ${amt.toLocaleString('id-ID')}</span>` : '-';
+                    tbody.innerHTML += `<tr><td style="color:#6e6e6e; font-size:13px;">${new Date(k.created_at).toLocaleString('id-ID')}</td><td style="font-weight:600;">${k.description}</td><td>${inText}</td><td>${outText}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Belum ada catatan mutasi kas.</td></tr>'; }
+            document.getElementById('total-saldo').innerText = `Rp ${saldo.toLocaleString('id-ID')}`;
+            updateBadges();
+        }
+
+        async function simpanKas() {
+            const type = document.getElementById('kas-type').value; const amount = document.getElementById('kas-amount').value; const desc = document.getElementById('kas-desc').value.trim();
+            if (!amount || amount <= 0 || !desc) { alert('Lengkapi nominal dan keterangan.'); return; }
+            await supabaseClient.from('buku_kas').insert([{ type, amount, description: desc }]);
+            document.getElementById('kas-amount').value = ''; document.getElementById('kas-desc').value = ''; loadKas();
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cNotif } = await supabaseClient.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-notif', cNotif); setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadKas();
+    </script>
+</body>
+</html>

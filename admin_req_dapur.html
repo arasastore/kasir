@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Dapur - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #f9f9f9; }
+        .btn-info { background: #e3f2fd; color: #007bff; border: 1px solid #007bff; padding: 6px 12px; font-size: 11px; }
+        
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; vertical-align: middle; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        
+        .badge-status { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .bg-pending { background: #fff3cd; color: #856404; }
+        .bg-proses { background: #e3f2fd; color: #007bff; }
+        .bg-parsial { background: #ffeeba; color: #d35400; border: 1px solid #ffeeba; }
+        .bg-selesai { background: #d4edda; color: #155724; }
+        
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: #ffffff; padding: 30px; border-radius: 16px; width: 100%; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #dcdcdc; border-radius: 6px; font-size: 14px; color: #2b2b2b; outline: none; }
+        .form-control:focus { border-color: #8b1a1a; }
+        .qty-input { width: 70px; padding: 8px; text-align: center; font-weight: 700; border: 1px solid #dcdcdc; border-radius: 6px; }
+        
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .card-header-flex { flex-direction: column; align-items: flex-start; gap: 10px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Logistik & Belanja Dapur</h2>
+                <span id="user-info" class="header-subtitle">Manajemen suplier bahan baku</span>
+            </div>
+            <button onclick="logout()" class="btn-outline" style="border:none;">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_laporan.html">Laporan</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html" class="active">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="card">
+            <div class="card-header-flex">
+                <h3 style="margin:0; font-size:18px; color:#1a1a1a;">Daftar Pengajuan Belanja per Divisi</h3>
+                <button onclick="bukaModalRekap()" class="btn btn-primary">📋 Lihat Rekap Master Belanja</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Waktu Pengajuan</th><th>Divisi Peminta</th><th>Rincian Belanja</th><th>Status</th><th>Aksi Eksekusi</th></tr></thead>
+                    <tbody id="req-body"><tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalRekap" class="web-modal">
+        <div class="web-modal-content" style="max-width: 600px;">
+            <div class="card-header-flex">
+                <h2 style="margin:0; font-size:20px; color:#1a1a1a;">Rekap Master Belanja (Sisa Wajib Beli)</h2>
+                <button onclick="downloadRekapCSV()" class="btn btn-outline" style="padding: 6px 12px; font-size:12px;">📥 Download Excel</button>
+            </div>
+            <p style="color:#6e6e6e; font-size:13px; margin-bottom:20px;">Daftar ini adalah gabungan sisa kurangan bahan baku dari seluruh dapur yang belum terbeli lunas. Bawa daftar ini ke pasar.</p>
+            
+            <div class="table-responsive" style="margin-bottom:20px;">
+                <table id="table-rekap-master">
+                    <thead><tr><th>Nama Bahan Baku</th><th style="text-align:center;">Total Sisa Beli</th><th>Satuan</th></tr></thead>
+                    <tbody id="rekap-body"></tbody>
+                </table>
+            </div>
+            <button onclick="document.getElementById('modalRekap').style.display='none'" class="btn btn-outline" style="width:100%;">Tutup Rekap</button>
+        </div>
+    </div>
+
+    <div id="modalSelesai" class="web-modal">
+        <div class="web-modal-content">
+            <h2 style="margin-top:0; color:#1a1a1a; margin-bottom:10px; font-size:20px;">Audit Penerimaan & Input Harga Beli</h2>
+            <p style="color:#6e6e6e; font-size:13px; margin-bottom:20px;">Masukkan jumlah fisik dan <b>Harga Beli per Satuan</b>. Jika ada sisa barang yang belum dibeli, biarkan jumlahnya sesuai fisik yang ada, sistem akan melacaknya sebagai <b>Backorder (Parsial)</b>.</p>
+            
+            <div style="background:#fafafa; padding:15px; border-radius:8px; border:1px solid #eeeeee; margin-bottom:25px; overflow-x:auto;">
+                <table style="width:100%; border:none; min-width:600px;">
+                    <thead>
+                        <tr>
+                            <th style="padding:8px 10px; border:none; color:#4a4a4a;">Bahan Baku (Sisa Beli)</th>
+                            <th style="padding:8px 10px; border:none; text-align:center; color:#4a4a4a;">Diterima Fisik</th>
+                            <th style="padding:8px 10px; border:none; text-align:right; color:#4a4a4a;">Harga Beli per Satuan (Rp)</th>
+                            <th style="padding:8px 10px; border:none; text-align:right; color:#4a4a4a;">Subtotal (Otomatis)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-item-list"></tbody>
+                </table>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#fff3cd; padding:15px; border-radius:8px; margin-bottom:25px; border:1px solid #ffeeba;">
+                <span style="font-weight:700; color:#856404; font-size:14px;">Total Kas yang akan dipotong:</span>
+                <span id="teks-total-kas" style="font-weight:900; color:#dc3545; font-size:22px;">Rp 0</span>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <button id="btn-submit-selesai" onclick="prosesValidasiSelesai()" class="btn btn-primary" style="flex:2; padding:15px; font-size:14px;">Simpan Validasi & Potong Kas</button>
+                <button onclick="document.getElementById('modalSelesai').style.display='none'" class="btn btn-outline" style="flex:1;">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalHistori" class="web-modal">
+        <div class="web-modal-content" style="max-width: 500px;">
+            <h2 style="margin-top:0; color:#1a1a1a; margin-bottom:5px; font-size:18px;">Jejak Fluktuasi Harga</h2>
+            <h3 id="judul-histori" style="color:#8b1a1a; font-size:15px; margin-bottom:20px;">Memuat...</h3>
+            <div class="table-responsive" style="max-height: 300px;">
+                <table>
+                    <thead><tr><th>Tanggal Pembelian</th><th style="text-align:right;">Harga Satuan Tercatat</th></tr></thead>
+                    <tbody id="histori-body"></tbody>
+                </table>
+            </div>
+            <button onclick="document.getElementById('modalHistori').style.display='none'" class="btn btn-outline" style="width:100%; margin-top:20px;">Tutup Jejak</button>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa Global`;
+
+        let currentRequests = [];
+        let activeBelanjaId = null;
+        let activeLocation = null;
+        let activeItems = [];
+        let masterRekapData = {};
+
+        async function loadReqDapur() {
+            const { data } = await supabaseClient.from('belanja_harian').select('*, belanja_detail(*)').order('created_at', { ascending: false });
+            const tbody = document.getElementById('req-body'); tbody.innerHTML = '';
+            masterRekapData = {}; 
+            
+            if (data && data.length > 0) {
+                currentRequests = data;
+                data.forEach(req => {
+                    let itemsHtml = '';
+                    
+                    req.belanja_detail.forEach(d => {
+                        const fulfilled = d.qty_fulfilled || 0;
+                        const remaining = d.qty_req - fulfilled;
+                        
+                        let noteHtml = '';
+                        if (req.status === 'pending') {
+                            noteHtml = `<span style="color:#856404; font-size:11px; font-weight:800;">(Req: ${d.qty_req} ${d.unit})</span>`;
+                        } else if (remaining <= 0) {
+                            noteHtml = `<span style="color:#2e7d32; font-size:11px; font-weight:800; background:#d4edda; padding:2px 6px; border-radius:4px; display:inline-block; margin-left:5px;">PAS!</span>`;
+                        } else if (fulfilled > 0) {
+                            noteHtml = `<span style="color:#dc3545; font-size:11px; font-weight:800; background:#ffebeb; padding:2px 6px; border-radius:4px; display:inline-block; margin-left:5px;">Kurang ${remaining} ${d.unit}</span>`;
+                        } else {
+                            noteHtml = `<span style="color:#856404; font-size:11px; font-weight:800; display:inline-block; margin-left:5px;">(Belum dibeli: ${d.qty_req} ${d.unit})</span>`;
+                        }
+
+                        itemsHtml += `<div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #eee; padding-bottom:5px;">
+                            <span>• ${d.item_name} ${noteHtml}</span>
+                            <button onclick="lihatHistori('${d.item_name}')" class="btn btn-info">Histori Harga</button>
+                        </div>`;
+                        
+                        // INJEKSI KE MASTER REKAP (Hanya yang bersisa dan berstatus proses/parsial)
+                        if ((req.status === 'proses' || req.status === 'parsial') && remaining > 0) {
+                            if (!masterRekapData[d.item_name]) { masterRekapData[d.item_name] = { qty: 0, unit: d.unit }; }
+                            masterRekapData[d.item_name].qty += remaining;
+                        }
+                    });
+
+                    // Penyesuaian Status Label
+                    let labelStatus = req.status;
+                    let statusClass = 'bg-selesai';
+                    if (req.status === 'pending') statusClass = 'bg-pending';
+                    else if (req.status === 'proses') statusClass = 'bg-proses';
+                    else if (req.status === 'parsial') {
+                        statusClass = 'bg-parsial';
+                        labelStatus = 'Parsial';
+                    }
+                    
+                    let aksiBtn = '';
+                    if (req.status === 'pending') {
+                        aksiBtn = `<button onclick="accBelanja(${req.id})" class="btn btn-outline" id="btn-acc-${req.id}">ACC Eksekusi</button>`;
+                    } else if (req.status === 'proses' || req.status === 'parsial') {
+                        aksiBtn = `<button onclick="bukaModalSelesai(${req.id}, '${req.location}')" class="btn btn-primary">Validasi Penerimaan</button>`;
+                    } else {
+                        aksiBtn = `<span style="color:#2e7d32; font-size:12px; font-weight:700;">Tuntas Dimasukkan Gudang</span>`;
+                    }
+                    
+                    tbody.innerHTML += `<tr><td style="color:#6e6e6e;">${new Date(req.created_at).toLocaleString('id-ID')}</td><td style="font-weight:700; color:#1a1a1a;">Dapur ${req.location}</td><td style="line-height:1.6;">${itemsHtml}</td><td><span class="badge-status ${statusClass}">${labelStatus}</span></td><td>${aksiBtn}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Tidak ada rekam jejak permintaan belanja.</td></tr>'; }
+            updateBadges();
+        }
+
+        async function accBelanja(id) {
+            if (confirm("Berikan otorisasi ACC untuk daftar belanja ini? Barang ini akan masuk ke Rekap Master Belanja.")) {
+                const btn = document.getElementById(`btn-acc-${id}`);
+                if(btn) { btn.innerText = 'Memproses...'; btn.disabled = true; }
+                try {
+                    await supabaseClient.from('belanja_harian').update({ status: 'proses' }).eq('id', id);
+                    loadReqDapur();
+                } catch (err) { alert("Terjadi kegagalan sinkronisasi otorisasi."); }
+            }
+        }
+
+        // ================= FITUR REKAP MASTER BELANJA =================
+        function bukaModalRekap() {
+            const tbody = document.getElementById('rekap-body'); tbody.innerHTML = '';
+            const keys = Object.keys(masterRekapData);
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#6e6e6e;">Belum ada pesanan bahan yang belum terpenuhi.</td></tr>';
+            } else {
+                keys.sort().forEach(namaBahan => {
+                    const dt = masterRekapData[namaBahan];
+                    tbody.innerHTML += `<tr><td style="font-weight:700; color:#1a1a1a;">${namaBahan}</td><td style="text-align:center; font-size:16px; font-weight:800; color:#8b1a1a;">${dt.qty}</td><td>${dt.unit}</td></tr>`;
+                });
+            }
+            document.getElementById('modalRekap').style.display = 'flex';
+        }
+
+        function downloadRekapCSV() {
+            const keys = Object.keys(masterRekapData);
+            if (keys.length === 0) return alert("Rekap kosong, tidak ada yang bisa di-download.");
+            
+            let csvContent = "\uFEFF"; 
+            csvContent += `"REKAP MASTER BELANJA (ARASA ENTERPRISE)"\n`;
+            csvContent += `"Nama Bahan Baku";"Total Wajib Beli";"Satuan"\n`;
+
+            keys.sort().forEach(namaBahan => {
+                const dt = masterRekapData[namaBahan];
+                csvContent += `"${namaBahan}";"${dt.qty}";"${dt.unit}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Master_Belanja_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        // ================= FITUR VALIDASI PENERIMAAN & HARGA =================
+        function bukaModalSelesai(id, location) {
+            activeBelanjaId = id; activeLocation = location;
+            const requestData = currentRequests.find(r => r.id === id);
+            
+            // HANYA MUNCULKAN BARANG YANG MASIH KURANG
+            activeItems = requestData ? requestData.belanja_detail.filter(d => (d.qty_req - (d.qty_fulfilled || 0)) > 0) : [];
+            
+            const listTbody = document.getElementById('modal-item-list'); listTbody.innerHTML = '';
+            
+            if (activeItems.length === 0) return alert("Sistem mendeteksi seluruh bahan di request ini sudah terpenuhi (Pas!).");
+
+            activeItems.forEach(item => {
+                const remaining = item.qty_req - (item.qty_fulfilled || 0);
+                listTbody.innerHTML += `
+                    <tr>
+                        <td style="padding:10px 10px; border-bottom:1px solid #eee; font-weight:600; color:#1a1a1a;">
+                            ${item.item_name} <br><small style="color:#dc3545; font-weight:bold;">Sisa Beli: ${remaining} ${item.unit}</small>
+                        </td>
+                        <td style="padding:10px 10px; border-bottom:1px solid #eee; text-align:center;">
+                            <input type="number" id="actual-qty-${item.id}" class="qty-input" value="${remaining}" min="0" max="${remaining}" onkeyup="hitungSubtotalSelesai()" onchange="hitungSubtotalSelesai()">
+                            <span style="font-size:12px; color:#6e6e6e; margin-left:5px;">${item.unit}</span>
+                        </td>
+                        <td style="padding:10px 10px; border-bottom:1px solid #eee; text-align:right;">
+                            <input type="number" id="actual-price-${item.id}" class="form-control" style="width:120px; display:inline-block;" placeholder="Harga/1 ${item.unit}" onkeyup="hitungSubtotalSelesai()" onchange="hitungSubtotalSelesai()">
+                        </td>
+                        <td style="padding:10px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:800; color:#2e7d32;" id="subtotal-${item.id}">
+                            Rp 0
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('teks-total-kas').innerText = 'Rp 0';
+            document.getElementById('modalSelesai').style.display = 'flex';
+        }
+
+        function hitungSubtotalSelesai() {
+            let totalKas = 0;
+            activeItems.forEach(item => {
+                let qty = Number(document.getElementById(`actual-qty-${item.id}`).value) || 0;
+                let harga = Number(document.getElementById(`actual-price-${item.id}`).value) || 0;
+                let subtotal = qty * harga;
+                document.getElementById(`subtotal-${item.id}`).innerText = `Rp ${subtotal.toLocaleString('id-ID')}`;
+                totalKas += subtotal;
+            });
+            document.getElementById('teks-total-kas').innerText = `Rp ${totalKas.toLocaleString('id-ID')}`;
+            return totalKas;
+        }
+
+        async function prosesValidasiSelesai() {
+            const nominalKas = hitungSubtotalSelesai();
+            const btn = document.getElementById('btn-submit-selesai');
+            btn.innerText = 'Menyimpan, Mutasi Stok, & Memotong Kas...'; btn.disabled = true;
+
+            try {
+                // 1. POTONG BUKU KAS OTOMATIS JIKA ADA NOMINAL
+                if (nominalKas > 0) {
+                    await supabaseClient.from('buku_kas').insert([{
+                        type: 'out', amount: nominalKas, description: `Belanja Bahan Baku Dapur ${activeLocation} (Audit Fisik)`
+                    }]);
+                }
+
+                // 2. EKSEKUSI STOK, HISTORI HARGA, & UPDATE KURANGAN
+                for (const item of activeItems) {
+                    const actualQty = Number(document.getElementById(`actual-qty-${item.id}`).value) || 0;
+                    const actualPrice = Number(document.getElementById(`actual-price-${item.id}`).value) || 0;
+                    
+                    if (actualQty > 0) {
+                        // Simpan Histori Harga
+                        if (actualPrice > 0) {
+                            try { await supabaseClient.from('price_history').insert([{ item_name: item.item_name, price_per_unit: actualPrice, unit: item.unit }]); } catch(e) {}
+                        }
+
+                        // Tambah Stok Gudang
+                        let targetItemId = null;
+                        const { data: masterData } = await supabaseClient.from('inventaris_master').select('id').eq('name', item.item_name).maybeSingle();
+                        if (masterData) { targetItemId = masterData.id; } 
+                        else {
+                            const { data: newMaster } = await supabaseClient.from('inventaris_master').insert([{ name: item.item_name, unit: item.unit }]).select('id').maybeSingle();
+                            if (newMaster) targetItemId = newMaster.id;
+                        }
+
+                        if (targetItemId) {
+                            const { data: stockData } = await supabaseClient.from('stok_gudang').select('id, qty').eq('location', activeLocation).eq('item_id', targetItemId).maybeSingle();
+                            if (stockData) { await supabaseClient.from('stok_gudang').update({ qty: stockData.qty + actualQty }).eq('id', stockData.id); } 
+                            else { await supabaseClient.from('stok_gudang').insert([{ location: activeLocation, item_id: targetItemId, qty: actualQty }]); }
+                        }
+                    }
+
+                    // Update Ingatan Backorder (qty_fulfilled)
+                    const newFulfilled = (item.qty_fulfilled || 0) + actualQty;
+                    await supabaseClient.from('belanja_detail').update({ qty_fulfilled: newFulfilled }).eq('id', item.id);
+                }
+
+                // 3. ANALISIS STATUS REQUEST KESELURUHAN (LUNAS ATAU MASIH PARSIAL?)
+                const requestData = currentRequests.find(r => r.id === activeBelanjaId);
+                let isSemuaPas = true;
+                
+                for (const d of requestData.belanja_detail) {
+                    let totalTerpenuhi = d.qty_fulfilled || 0;
+                    const inputEl = document.getElementById(`actual-qty-${d.id}`);
+                    if (inputEl) { totalTerpenuhi += (Number(inputEl.value) || 0); }
+                    
+                    if (totalTerpenuhi < d.qty_req) {
+                        isSemuaPas = false; // Ternyata masih ada yang kurang
+                    }
+                }
+
+                const newStatus = isSemuaPas ? 'selesai' : 'parsial';
+                await supabaseClient.from('belanja_harian').update({ status: newStatus }).eq('id', activeBelanjaId);
+                
+                document.getElementById('modalSelesai').style.display = 'none'; loadReqDapur();
+                const popup = document.createElement('div'); popup.innerText = `✅ Audit Selesai! Status Order: ${newStatus.toUpperCase()}`; popup.style.cssText = 'position:fixed; top:20px; right:20px; background:#2e7d32; color:white; padding:15px; border-radius:8px; z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.2); font-weight:bold;'; document.body.appendChild(popup); setTimeout(() => popup.remove(), 3500);
+            } catch (err) { alert("Integritas data terganggu. Pastikan kolom qty_fulfilled sudah dibuat."); console.error(err); } 
+            finally { btn.innerText = 'Simpan Validasi & Potong Kas'; btn.disabled = false; }
+        }
+
+        // ================= FITUR HISTORI HARGA =================
+        async function lihatHistori(namaBahan) {
+            document.getElementById('judul-histori').innerText = namaBahan.toUpperCase();
+            const tbody = document.getElementById('histori-body'); tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#6e6e6e;">Mencari jejak harga...</td></tr>';
+            document.getElementById('modalHistori').style.display = 'flex';
+
+            try {
+                const { data } = await supabaseClient.from('price_history').select('*').eq('item_name', namaBahan).order('created_at', { ascending: false });
+                tbody.innerHTML = '';
+                if (data && data.length > 0) {
+                    data.forEach(h => {
+                        tbody.innerHTML += `<tr><td style="color:#6e6e6e;">${new Date(h.created_at).toLocaleString('id-ID')}</td><td style="text-align:right; font-weight:800; color:#1a1a1a;">Rp ${h.price_per_unit.toLocaleString('id-ID')} <span style="font-weight:normal; font-size:12px; color:#888;">/${h.unit}</span></td></tr>`;
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#6e6e6e;">Belum ada jejak pembelian untuk bahan ini.</td></tr>'; }
+            } catch (e) { tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#dc3545;">Tabel Histori Harga belum terpasang di Database.</td></tr>'; }
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadReqDapur();
+    </script>
+</body>
+</html>

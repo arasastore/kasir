@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifikasi - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; }
+        .btn-primary:hover { background: #6b1414; }
+        .form-control { padding: 10px 15px; border: 1px solid #dcdcdc; border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; }
+        .notif-item { padding: 18px 20px; border-bottom: 1px solid #eeeeee; display: flex; flex-direction: column; gap: 6px; border-left: 4px solid transparent; transition: 0.2s; }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-unread { background-color: #fffafaf5; border-left-color: #8b1a1a; }
+        .notif-title { font-weight: 700; color: #1a1a1a; font-size: 15px; }
+        .notif-time { color: #6e6e6e; font-size: 12px; font-weight: 600; }
+        .filter-bar { display: flex; gap: 15px; align-items: flex-end; margin-bottom: 20px; background: #fafafa; padding: 15px; border-radius: 10px; border: 1px solid #eeeeee; }
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn { width: 100%; } .filter-bar { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Radar Notifikasi Global</h2>
+                <span id="user-info" class="header-subtitle">Pemantauan aktivitas sistem terpusat</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="markAllRead()" class="btn btn-primary">Tandai Semua Dibaca</button>
+                <button onclick="logout()" class="btn btn-outline" style="border:none;">Logout Sistem</button>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_laporan.html">Laporan</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_notif.html" class="active">Notifikasi <span id="badge-notif" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="card">
+            <div class="filter-bar">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:12px; font-weight:700; color:#6e6e6e; margin-bottom:5px;">Mulai Tanggal</label>
+                    <input type="date" id="date-start" class="form-control" style="width:100%;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:12px; font-weight:700; color:#6e6e6e; margin-bottom:5px;">Sampai Tanggal</label>
+                    <input type="date" id="date-end" class="form-control" style="width:100%;">
+                </div>
+                <button onclick="loadNotif()" class="btn btn-outline" style="background:#fff; height:42px;">🔍 Scan Radar</button>
+            </div>
+
+            <div id="notif-container" style="padding: 10px 0;">
+                <div style="text-align:center; color:#6e6e6e; padding:30px;">Memuat riwayat radar...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa Global`;
+
+        // Set default filter ke hari ini
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date-start').value = today;
+        document.getElementById('date-end').value = today;
+
+        async function loadNotif() {
+            const startISO = new Date(document.getElementById('date-start').value + "T00:00:00").toISOString();
+            const endISO = new Date(document.getElementById('date-end').value + "T23:59:59.999").toISOString();
+
+            const { data } = await supabaseClient.from('notifications')
+                .select('*')
+                .gte('created_at', startISO)
+                .lte('created_at', endISO)
+                .order('created_at', { ascending: false })
+                .limit(100); // Batasi 100 per pencarian agar browser tidak nge-lag
+
+            const container = document.getElementById('notif-container'); container.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                data.forEach(n => {
+                    const unreadClass = n.is_read ? '' : 'notif-unread';
+                    let iconTitle = n.title;
+                    if (n.title.toLowerCase().includes('void')) iconTitle = '🚨 ' + n.title;
+                    if (n.title.toLowerCase().includes('order')) iconTitle = '📦 ' + n.title;
+                    
+                    container.innerHTML += `
+                        <div class="notif-item ${unreadClass}">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="notif-title">${iconTitle}</span>
+                                <span class="notif-time">${new Date(n.created_at).toLocaleString('id-ID')}</span>
+                            </div>
+                            <div style="color:#4a4a4a; font-size:13px; margin-top:4px;">${n.message}</div>
+                        </div>
+                    `;
+                });
+            } else { container.innerHTML = '<div style="text-align:center; color:#6e6e6e; padding:30px;">Sistem bersih. Belum ada log aktivitas masuk di tanggal ini.</div>'; }
+            updateBadges();
+        }
+
+        async function markAllRead() { 
+            await supabaseClient.from('notifications').update({ is_read: true }).eq('is_read', false); 
+            loadNotif(); 
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cNotif } = await supabaseClient.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-notif', cNotif); setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadNotif();
+    </script>
+</body>
+</html>

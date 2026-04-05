@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasir POS - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .container { display: flex; gap: 25px; align-items: flex-start; }
+        .menu-section { flex: 3; }
+        .cart-section { flex: 2; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: sticky; top: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .card { background: #ffffff; border: 1px solid #eeeeee; padding: 20px 15px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .card:hover { border-color: #8b1a1a; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(139,26,26,0.08); }
+        .card h4 { margin: 0 0 8px 0; font-size: 14px; color: #1a1a1a; }
+        .search-bar { width: 100%; padding: 14px 20px; border: 1px solid #dcdcdc; border-radius: 10px; margin-bottom: 20px; font-size: 14px; outline: none; transition: 0.2s; }
+        .search-bar:focus { border-color: #8b1a1a; box-shadow: 0 0 0 3px rgba(139,26,26,0.1); }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .btn-success { background: #2e7d32; color: #ffffff; }
+        .btn-warning { background: #f57f17; color: #ffffff; }
+        .btn-info { background: #0288d1; color: #ffffff; }
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: #ffffff; padding: 30px; border-radius: 16px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-height: 90vh; overflow-y: auto; }
+        .input-nominal { width: 100%; padding: 16px; font-size: 22px; text-align: center; font-weight: 700; border: 1px solid #dcdcdc; border-radius: 10px; margin-bottom: 15px; outline: none; }
+        .input-nominal:focus { border-color: #8b1a1a; }
+        @media (max-width: 900px) { .container { flex-direction: column; } .menu-section, .cart-section { width: 100%; } .cart-section { position: relative; top: 0; } }
+        @media print { body * { visibility: hidden; margin: 0; padding: 0; } #print-area, #print-area * { visibility: visible; } #print-area { position: absolute; left: 0; top: 0; width: 58mm; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: black; padding: 5px; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h2>Terminal Kasir POS</h2>
+            <span id="txt-kasir-info" class="header-subtitle">Memuat data...</span>
+        </div>
+        <button onclick="logoutKasir()" class="btn btn-outline">Logout Sistem</button>
+    </div>
+
+    <div class="nav-tabs">
+        <a href="index.html" class="active">Kasir Utama</a>
+        <a href="kasir_waiting.html">Antrean KDS</a>
+        <a href="kasir_hold.html">Hold Tagihan</a>
+        <a href="kasir_booking.html">Booking</a>
+        <a href="kasir_order.html">Order Pusat</a>
+        <a href="kasir_riwayat.html">Riwayat</a>
+    </div>
+
+    <div class="container">
+        <div class="menu-section">
+            <h2 style="margin-bottom: 15px; font-size: 18px; color: #1a1a1a;">Katalog Menu</h2>
+            <input type="text" id="search-menu" class="search-bar" placeholder="Pencarian menu cepat..." autocomplete="off">
+            <div id="product-list" class="grid"><p style="color:#6e6e6e;">Memuat data...</p></div>
+        </div>
+
+        <div class="cart-section">
+            <h2 style="margin-bottom: 15px; font-size: 18px; color: #1a1a1a;">Keranjang Transaksi</h2>
+            <div id="cart-items" style="margin-bottom: 20px; color:#6e6e6e;"><p>Belum ada pesanan masuk.</p></div>
+            <input type="text" id="customer-name" placeholder="Nama Pelanggan (Wajib)" style="width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #dcdcdc; border-radius: 8px; outline: none;" autocomplete="off">
+            <h3 style="margin: 15px 0; font-size: 24px; color: #8b1a1a; text-align: right;">Total: Rp <span id="total-price">0</span></h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button class="btn btn-warning" style="flex: 1;" onclick="prosesTransaksi('hold')">Hold</button>
+                <button class="btn btn-info" style="flex: 1;" onclick="bukaModalBooking()">Booking</button>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; padding: 18px; font-size: 16px;" onclick="bukaModalTipeBayar()">Selesaikan Pembayaran</button>
+        </div>
+    </div>
+
+    <div id="modalInputQty" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom: 20px;">Input Kuantitas</h2><p style="font-size:20px; font-weight:700; margin-bottom: 20px; color:#8b1a1a;" id="nama-menu-qty"></p><div style="display:flex; gap:15px; margin-bottom:20px;"><div style="flex:1; text-align:left;"><label style="font-size:12px; font-weight:700; color:#6e6e6e; display:block; margin-bottom:5px;">Jml PACK (Isi 6)</label><input type="number" id="input-qty-pack" class="input-nominal" value="0" min="0" onkeyup="hitungTotalPcs()" onchange="hitungTotalPcs()"></div><div style="flex:1; text-align:left;"><label style="font-size:12px; font-weight:700; color:#6e6e6e; display:block; margin-bottom:5px;">Jml BIJI (Pcs)</label><input type="number" id="input-qty-biji" class="input-nominal" value="1" min="0" onkeyup="hitungTotalPcs()" onchange="hitungTotalPcs()"></div></div><div style="margin: 20px 0; border-top: 1px dashed #dcdcdc; padding-top: 20px;"><span style="font-size:14px; color:#6e6e6e; font-weight:600;">Total Akumulasi:</span><h3 style="font-size:36px; color:#1a1a1a; margin:0;"><span id="teks-total-pcs">1</span> Pcs</h3></div><button id="btn-tambah-keranjang" class="btn btn-primary" style="width:100%; margin-bottom:10px;" onclick="masukkanKeKeranjang()">Tambahkan ke Keranjang</button><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalInputQty').style.display='none'">Batal</button></div></div>
+    
+    <div id="modalBooking" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom:20px;">Registrasi Booking</h2><div style="text-align: left; margin-bottom: 15px;"><label style="font-weight:700; font-size:12px; color:#6e6e6e; display:block; margin-bottom:5px;">Jadwal Pengambilan</label><input type="date" id="book-date" style="width:100%; padding:12px; border:1px solid #dcdcdc; border-radius:8px; outline:none;"></div><div style="text-align: left; margin-bottom: 15px;"><label style="font-weight:700; font-size:12px; color:#6e6e6e; display:block; margin-bottom:5px;">Lokasi Pengambilan</label><select id="book-branch" style="width:100%; padding:12px; border:1px solid #dcdcdc; border-radius:8px; outline:none;"><option value="Pusat">Arasa Pusat</option><option value="Gatoel">Arasa Gatoel</option><option value="Stasiun">Arasa Stasiun</option></select></div><div style="text-align: left; margin-bottom: 20px;"><label style="font-weight:700; font-size:12px; color:#6e6e6e; display:block; margin-bottom:5px;">Kontak WhatsApp</label><input type="number" id="book-wa" placeholder="0812xxxx" style="width:100%; padding:12px; border:1px solid #dcdcdc; border-radius:8px; outline:none;"></div><h3 style="margin: 20px 0; color:#8b1a1a; font-size:22px;">Rp <span id="book-total">0</span></h3><button class="btn btn-warning" style="width:100%; margin-bottom:10px;" onclick="prosesTransaksi('hold', 'Hold', true)">Simpan Tanpa Bayar</button><button class="btn btn-success" style="width:100%; margin-bottom:15px;" onclick="lanjutBayarBooking()">Proses Pembayaran</button><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalBooking').style.display='none'">Batal</button></div></div>
+    
+    <div id="modalTipeBayar" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom:15px;">Metode Pembayaran</h2><p style="color:#6e6e6e; margin-bottom:5px;">Total Tagihan</p><h3 style="font-size: 28px; color:#8b1a1a; margin-bottom:25px;" id="teks-total-modal">Rp 0</h3><div style="display:flex; gap:10px; margin-bottom: 15px;"><button class="btn btn-success" style="flex:1; padding:15px;" onclick="bukaModalCash()">Tunai (Cash)</button><button class="btn btn-info" style="flex:1; padding:15px;" onclick="prosesTransaksi('paid', 'Non-Cash')">Non-Tunai</button></div><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalTipeBayar').style.display='none'">Batal</button></div></div>
+    
+    <div id="modalCash" class="web-modal"><div class="web-modal-content"><h2 style="margin-top:0; color:#1a1a1a; margin-bottom:15px;">Penerimaan Tunai</h2><p style="color:#6e6e6e; margin-bottom:5px;">Total Tagihan: <strong style="color:#1a1a1a;" id="teks-total-cash">Rp 0</strong></p><input type="number" id="input-uang-pas" class="input-nominal" placeholder="Nominal Uang" onkeyup="hitungKembalian()" style="margin-top:15px;"><div style="background:#fafafa; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #eeeeee;"><span style="font-size:12px; color:#6e6e6e; font-weight:700; text-transform:uppercase;">Uang Kembalian</span><h3 id="teks-kembalian" style="color: #2e7d32; margin: 5px 0 0 0; font-size:24px;">Rp 0</h3></div><button id="btn-konfirm-cash" class="btn btn-primary" style="width:100%; margin-bottom:10px; padding:15px;" onclick="prosesTransaksi('paid', 'Cash')" disabled>Konfirmasi & Cetak</button><button class="btn btn-outline" style="width:100%;" onclick="document.getElementById('modalCash').style.display='none'">Kembali</button></div></div>
+    
+    <div id="modalSukses" class="web-modal"><div class="web-modal-content"><div style="width:80px; height:80px; background:#d4edda; color:#155724; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:40px; font-weight:bold; margin:0 auto 20px auto;">✓</div><h2 id="judul-sukses" style="color:#1a1a1a; margin-bottom:15px;">Transaksi Berhasil</h2><p id="pesan-sukses" style="color: #6e6e6e; font-size: 14px; white-space: pre-wrap; line-height:1.6; margin-bottom:25px; background:#fafafa; padding:15px; border-radius:8px; text-align:left;"></p><button class="btn btn-primary" style="width:100%;" onclick="tutupSemuaDanReset()">Selesai</button></div></div>
+    
+    <div id="print-area" class="print-area" style="display: none;"></div>
+    
+    <script src="app.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const searchInput = document.getElementById('search-menu');
+            const custNameInput = document.getElementById('customer-name');
+            
+            // 1. Logika Pencarian & Double Enter (Pilih / Bayar / Sensor Gembok)
+            searchInput.addEventListener('keyup', function(e) {
+                const val = this.value.trim().toLowerCase();
+                const cards = document.querySelectorAll('#product-list .card');
+                let firstVisible = null;
+
+                cards.forEach(card => {
+                    const nameEl = card.querySelector('h4');
+                    if(nameEl) {
+                        const name = nameEl.innerText.toLowerCase();
+                        if (name.includes(val)) {
+                            card.style.display = '';
+                            if (!firstVisible) firstVisible = card;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    }
+                });
+
+                // Jika Enter di kolom kosong -> SENSOR GEMBOK
+                if (e.key === 'Enter' && val === '') {
+                    const cartContainer = document.getElementById('cart-items');
+                    if (!cartContainer.innerText.includes('Belum ada pesanan')) {
+                        
+                        // SENSOR GEMBOK: Cek apakah input nama abu-abu/disabled/readonly/tidak perlu
+                        const isNameDisabled = custNameInput.disabled || 
+                                               custNameInput.readOnly || 
+                                               (custNameInput.placeholder && custNameInput.placeholder.toLowerCase().includes('tidak'));
+                        
+                        if (isNameDisabled) {
+                            // BYPASS: Langsung buka pembayaran
+                            bukaModalTipeBayar();
+                        } else {
+                            // WAJIB NAMA: Fokus jika kosong, bayar jika terisi
+                            if (!custNameInput.value.trim()) {
+                                custNameInput.focus();
+                            } else {
+                                bukaModalTipeBayar();
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // Jika Enter dan ada hasil cari -> Pilih menu teratas & Langsung Eksekusi Sapu Bersih
+                if (e.key === 'Enter' && firstVisible && val !== '') {
+                    firstVisible.click();
+                    
+                    // SAPU BERSIH INSTAN
+                    setTimeout(() => {
+                        searchInput.value = '';
+                        cards.forEach(c => c.style.display = '');
+                    }, 10);
+                }
+            });
+
+            // 2. Shortcut Lanjut Bayar dari Input Nama
+            custNameInput.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    bukaModalTipeBayar();
+                }
+            });
+
+            // 3. Auto-Focus & Sapu Bersih saat Kartu Menu diklik (baik via mouse maupun Enter)
+            document.getElementById('product-list').addEventListener('click', function(e) {
+                const card = e.target.closest('.card');
+                if (card) {
+                    searchInput.value = '';
+                    document.querySelectorAll('#product-list .card').forEach(c => c.style.display = '');
+
+                    setTimeout(() => {
+                        const inputBiji = document.getElementById('input-qty-biji');
+                        if(inputBiji) {
+                            inputBiji.focus();
+                            inputBiji.select();
+                        }
+                    }, 50);
+                }
+            });
+
+            // GLOBAL KEYDOWN: Jantung Automasi V3
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const modalQty = document.getElementById('modalInputQty');
+                    const modalTipeBayar = document.getElementById('modalTipeBayar');
+                    const modalCash = document.getElementById('modalCash');
+                    const modalSukses = document.getElementById('modalSukses');
+
+                    // A. Di dalam Modal Kuantitas
+                    if (modalQty && modalQty.style.display === 'flex') {
+                        e.preventDefault();
+                        masukkanKeKeranjang(); // Fungsi bawaan app.js
+                        
+                        modalQty.style.display = 'none';
+                        searchInput.focus();
+                        return;
+                    }
+
+                    // B. Di dalam Modal Tipe Bayar -> Auto Pilih Tunai
+                    if (modalTipeBayar && modalTipeBayar.style.display === 'flex') {
+                        e.preventDefault();
+                        bukaModalCash(); // Lanjut ke modal tunai
+                        
+                        setTimeout(() => {
+                            const inputUang = document.getElementById('input-uang-pas');
+                            if (inputUang) {
+                                inputUang.value = ''; 
+                                inputUang.focus();
+                            }
+                        }, 50);
+                        return;
+                    }
+
+                    // C. Di dalam Modal Tunai -> Auto Konfirmasi
+                    if (modalCash && modalCash.style.display === 'flex') {
+                        const btnKonfirm = document.getElementById('btn-konfirm-cash');
+                        if (btnKonfirm && !btnKonfirm.disabled) {
+                            e.preventDefault();
+                            btnKonfirm.click();
+                        }
+                        return;
+                    }
+
+                    // D. Di dalam Modal Sukses -> Selesai & Reset
+                    if (modalSukses && modalSukses.style.display === 'flex') {
+                        e.preventDefault();
+                        tutupSemuaDanReset(); // Fungsi bawaan app.js
+                        setTimeout(() => searchInput.focus(), 100);
+                        return;
+                    }
+                }
+            });
+
+            // Beri fokus ke pencarian saat web pertama kali dimuat
+            setTimeout(() => searchInput.focus(), 300);
+        });
+    </script>
+</body>
+</html>

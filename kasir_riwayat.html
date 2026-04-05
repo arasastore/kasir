@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Kasir - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .card { background: #ffffff; border: 1px solid #eeeeee; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer; transition: 0.2s; text-transform: uppercase; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-danger { background: #ffebeb; color: #dc3545; }
+        .btn-danger:hover { background: #dc3545; color: #ffffff; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; vertical-align: middle; }
+        th { background: #fafafa; font-weight: 700; color: #4a4a4a; font-size: 12px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+        .bg-paid { background: #d4edda; color: #155724; }
+        .bg-void { background: #ffebeb; color: #dc3545; }
+        .bg-pending { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h2>Riwayat & Void Transaksi</h2>
+            <span class="header-subtitle" id="txt-kasir-info">Kasir: - | Cabang: -</span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="btn btn-outline">Kembali ke Kasir Utama</button>
+    </div>
+
+    <div class="nav-tabs">
+        <a href="index.html">Kasir Utama</a>
+        <a href="kasir_waiting.html">Antrean KDS</a>
+        <a href="kasir_hold.html">Hold Tagihan</a>
+        <a href="kasir_booking.html">Booking</a>
+        <a href="kasir_order.html">Order Pusat</a>
+        <a href="kasir_riwayat.html" class="active">Riwayat</a>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 18px; margin-bottom: 20px; color: #1a1a1a;">Daftar Transaksi Hari Ini</h2>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>No. Struk</th><th>Waktu</th><th>Pelanggan</th><th>Total Belanja</th><th>Status</th><th>Aksi Mahkamah</th></tr></thead>
+                <tbody id="riwayat-body"><tr><td colspan="6" style="text-align:center; color:#6e6e6e;">Memuat riwayat...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const myBranch = localStorage.getItem('userBranch') || 'Pusat';
+        const myName = localStorage.getItem('userName') || 'Admin';
+        document.getElementById('txt-kasir-info').innerText = `Kasir: ${myName} | Cabang: Arasa ${myBranch}`;
+
+        async function loadRiwayatHariIni() {
+            const startDay = new Date(); startDay.setHours(0,0,0,0);
+            
+            const { data } = await supabaseClient.from('transactions')
+                .select('*')
+                .eq('branch', myBranch)
+                .gte('created_at', startDay.toISOString())
+                .order('created_at', { ascending: false });
+
+            const tbody = document.getElementById('riwayat-body'); tbody.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                // Cek status request void (Agar tombol berubah jika sedang diproses)
+                const { data: reqData } = await supabaseClient.from('request_trx').select('transaction_id, status').eq('branch', myBranch);
+                const reqMap = {};
+                if (reqData) { reqData.forEach(r => reqMap[r.transaction_id] = r.status); }
+
+                data.forEach(t => {
+                    let badge = ''; let aksi = '';
+                    
+                    if (t.status === 'voided') {
+                        badge = '<span class="badge-status bg-void">VOIDED</span>';
+                        aksi = '<span style="color:#dc3545; font-size:11px; font-weight:800;">Dibatalkan Pusat</span>';
+                    } else if (reqMap[t.id] === 'pending') {
+                        badge = '<span class="badge-status bg-pending">MENUNGGU ACC VOID</span>';
+                        aksi = '<span style="color:#856404; font-size:11px; font-weight:800;">Proses Banding</span>';
+                    } else if (t.status === 'paid') {
+                        badge = '<span class="badge-status bg-paid">LUNAS</span>';
+                        aksi = `<button onclick="ajukanVoid('${t.id}', '${t.receipt_no}')" class="btn btn-danger">Ajukan Void</button>`;
+                    } else {
+                        badge = `<span class="badge-status bg-pending">${t.status.toUpperCase()}</span>`;
+                        aksi = '-';
+                    }
+
+                    tbody.innerHTML += `<tr><td style="font-weight:800; font-family:monospace; color:#8b1a1a;">${t.receipt_no}</td><td>${new Date(t.created_at).toLocaleTimeString('id-ID')}</td><td style="font-weight:600;">${t.customer_name || 'Umum'}</td><td style="color:#2e7d32; font-weight:800;">Rp ${t.total_amount.toLocaleString('id-ID')}</td><td>${badge}</td><td>${aksi}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#6e6e6e;">Belum ada transaksi hari ini.</td></tr>'; }
+        }
+
+        async function ajukanVoid(trxId, receiptNo) {
+            const reason = prompt(`Tuliskan alasan yang jelas mengapa struk ${receiptNo} dibatalkan (Salah input/Customer Batal):`);
+            if (!reason) return;
+
+            try {
+                // 1. Masukkan ke Antrean Void Pusat
+                await supabaseClient.from('request_trx').insert([{
+                    transaction_id: trxId, branch: myBranch, cashier_name: myName, reason: reason, status: 'pending'
+                }]);
+
+                // 2. Injeksi CCTV Notifikasi ke Admin
+                await supabaseClient.from('notifications').insert([{
+                    title: '🚨 Panggilan Mahkamah Void',
+                    message: `Kasir ${myName} (Cabang ${myBranch}) mengajukan VOID untuk struk ${receiptNo}. Alasan: "${reason}"`,
+                    is_read: false
+                }]);
+
+                alert("Pengajuan Void berhasil diluncurkan ke Dasbor Pusat! Tunggu ACC Admin.");
+                loadRiwayatHariIni();
+            } catch(e) { alert("Gagal mengajukan void. Jaringan terputus."); }
+        }
+
+        window.onload = loadRiwayatHariIni;
+    </script>
+</body>
+</html>

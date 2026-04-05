@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .omset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .card-omset { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-left: 4px solid #8b1a1a; }
+        .card-omset h4 { margin: 0; color: #6e6e6e; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        .card-omset h2 { margin: 10px 0 0 0; color: #1a1a1a; font-size: 26px; font-weight: 800; }
+        .area-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .card-area { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .card-area:hover { transform: translateY(-3px); border-color: #8b1a1a; box-shadow: 0 8px 25px rgba(139, 26, 26, 0.08); }
+        .card-area h3 { margin: 0 0 15px 0; color: #1a1a1a; border-bottom: 1px solid #eeeeee; padding-bottom: 12px; font-size: 16px; }
+        .area-stat { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .area-stat span { color: #6e6e6e; }
+        .area-stat b { color: #8b1a1a; font-weight: 700; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        #detail-box { display: none; }
+        .date-filter { padding: 10px; border: 1px solid #dcdcdc; border-radius: 6px; outline: none; font-family: inherit; }
+        @media (max-width: 900px) { .omset-grid, .area-grid { grid-template-columns: 1fr; } .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Ruang Kendali Dewa</h2>
+                <span id="user-info" class="header-subtitle">Memuat data...</span>
+            </div>
+            <button onclick="logout()" class="btn btn-outline">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html" class="active">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_notif.html">Notifikasi <span id="badge-notif" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="omset-grid">
+            <div class="card-omset"><h4>Harian Global</h4><h2 id="omset-hari">Rp 0</h2></div>
+            <div class="card-omset" style="border-left-color: #2e7d32;"><h4>Mingguan Global</h4><h2 id="omset-minggu">Rp 0</h2></div>
+            <div class="card-omset" style="border-left-color: #d35400;"><h4>Bulanan Global</h4><h2 id="omset-bulan">Rp 0</h2></div>
+        </div>
+
+        <div class="area-grid">
+            <div class="card-area" onclick="showDetail('Pusat')"><h3>Arasa Pusat</h3><div class="area-stat"><span>Omset Hari Ini</span><b id="omset-Pusat">Rp 0</b></div><div class="area-stat"><span>Transaksi</span><b id="trx-Pusat">0</b></div></div>
+            <div class="card-area" onclick="showDetail('Gatoel')"><h3>Arasa Gatoel</h3><div class="area-stat"><span>Omset Hari Ini</span><b id="omset-Gatoel">Rp 0</b></div><div class="area-stat"><span>Transaksi</span><b id="trx-Gatoel">0</b></div></div>
+            <div class="card-area" onclick="showDetail('Stasiun')"><h3>Arasa Stasiun</h3><div class="area-stat"><span>Omset Hari Ini</span><b id="omset-Stasiun">Rp 0</b></div><div class="area-stat"><span>Transaksi</span><b id="trx-Stasiun">0</b></div></div>
+        </div>
+
+        <div id="detail-box" class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eeeeee; padding-bottom: 15px;">
+                <h3 id="detail-title" style="margin:0; color:#1a1a1a;">Detail Transaksi</h3>
+                <input type="date" id="filter-tanggal" class="date-filter" onchange="filterDetailTanggal()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>No. Struk</th><th>Waktu</th><th>Pelanggan</th><th>Total</th></tr></thead>
+                    <tbody id="detail-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const role = localStorage.getItem('userRole');
+        if (role !== 'admin_pusat' && role !== 'admin' && role !== 'admin_cabang') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa ${localStorage.getItem('userBranch') || 'Pusat'}`;
+
+        let currentBranchDetail = 'Pusat';
+
+        // LOGIKA PERHITUNGAN WAKTU YANG AKURAT
+        function getStartOfDay(date) { const d = new Date(date); d.setHours(0,0,0,0); return d; }
+        function getStartOfWeek(date) { const d = new Date(date); d.setHours(0,0,0,0); d.setDate(d.getDate() - d.getDay()); return d; }
+        function getStartOfMonth(date) { const d = new Date(date); d.setHours(0,0,0,0); d.setDate(1); return d; }
+
+        async function loadDashboard() {
+            const now = new Date();
+            const startMonthISO = getStartOfMonth(now).toISOString();
+            
+            // Tarik data sebulan terakhir agar tidak berat
+            const { data: trx } = await supabaseClient.from('transactions').select('*').gte('created_at', startMonthISO).eq('status', 'paid');
+            
+            let omsetHari = 0, omsetMinggu = 0, omsetBulan = 0;
+            const areaStat = { Pusat: 0, Gatoel: 0, Stasiun: 0, trxP: 0, trxG: 0, trxS: 0 };
+            
+            const startDayTime = getStartOfDay(now).getTime();
+            const startWeekTime = getStartOfWeek(now).getTime();
+
+            if (trx) {
+                trx.forEach(t => {
+                    const tTime = new Date(t.created_at).getTime();
+                    const amt = Number(t.total_amount); // Menggunakan total_amount sesuai skema Paduka
+                    
+                    omsetBulan += amt;
+                    if (tTime >= startWeekTime) omsetMinggu += amt;
+                    if (tTime >= startDayTime) {
+                        omsetHari += amt;
+                        if (t.branch === 'Pusat') { areaStat.Pusat += amt; areaStat.trxP++; }
+                        if (t.branch === 'Gatoel') { areaStat.Gatoel += amt; areaStat.trxG++; }
+                        if (t.branch === 'Stasiun') { areaStat.Stasiun += amt; areaStat.trxS++; }
+                    }
+                });
+            }
+
+            document.getElementById('omset-hari').innerText = `Rp ${omsetHari.toLocaleString('id-ID')}`;
+            document.getElementById('omset-minggu').innerText = `Rp ${omsetMinggu.toLocaleString('id-ID')}`;
+            document.getElementById('omset-bulan').innerText = `Rp ${omsetBulan.toLocaleString('id-ID')}`;
+            
+            document.getElementById('omset-Pusat').innerText = `Rp ${areaStat.Pusat.toLocaleString('id-ID')}`;
+            document.getElementById('omset-Gatoel').innerText = `Rp ${areaStat.Gatoel.toLocaleString('id-ID')}`;
+            document.getElementById('omset-Stasiun').innerText = `Rp ${areaStat.Stasiun.toLocaleString('id-ID')}`;
+            document.getElementById('trx-Pusat').innerText = areaStat.trxP;
+            document.getElementById('trx-Gatoel').innerText = areaStat.trxG;
+            document.getElementById('trx-Stasiun').innerText = areaStat.trxS;
+            updateBadges();
+            
+            // Set filter tanggal ke hari ini
+            document.getElementById('filter-tanggal').value = now.toISOString().split('T')[0];
+        }
+
+        async function showDetail(branch) {
+            currentBranchDetail = branch;
+            document.getElementById('detail-box').style.display = 'block';
+            document.getElementById('detail-title').innerText = `Detail Transaksi - Arasa ${branch}`;
+            filterDetailTanggal();
+        }
+
+        async function filterDetailTanggal() {
+            const dateVal = document.getElementById('filter-tanggal').value;
+            if(!dateVal) return;
+            
+            const startDay = new Date(dateVal); startDay.setHours(0,0,0,0);
+            const endDay = new Date(dateVal); endDay.setHours(23,59,59,999);
+
+            const { data } = await supabaseClient.from('transactions').select('*')
+                .eq('branch', currentBranchDetail)
+                .eq('status', 'paid') // Hanya yang lunas
+                .gte('created_at', startDay.toISOString())
+                .lte('created_at', endDay.toISOString())
+                .order('created_at', { ascending: false });
+
+            const tbody = document.getElementById('detail-body'); tbody.innerHTML = '';
+            if (data && data.length > 0) {
+                data.forEach(t => {
+                    tbody.innerHTML += `<tr><td style="font-weight:700;">${t.receipt_no}</td><td>${new Date(t.created_at).toLocaleTimeString('id-ID')}</td><td>${t.customer_name || 'Umum'}</td><td style="color:#2e7d32; font-weight:700;">Rp ${t.total_amount.toLocaleString('id-ID')}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Belum ada transaksi di tanggal ini.</td></tr>'; }
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cNotif } = await supabaseClient.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-notif', cNotif); setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadDashboard();
+    </script>
+</body>
+</html>

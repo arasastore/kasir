@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Stok - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        
+        .container { display: flex; gap: 25px; align-items: flex-start; }
+        .menu-section { flex: 3; }
+        .cart-section { flex: 1.5; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: sticky; top: 20px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .card { background: #ffffff; border: 1px solid #eeeeee; padding: 20px 15px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .card:hover { border-color: #8b1a1a; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(139,26,26,0.08); }
+        .card h4 { margin: 0 0 8px 0; font-size: 14px; color: #1a1a1a; text-transform: uppercase; }
+        
+        .search-bar { width: 100%; padding: 14px 20px; border: 1px solid #dcdcdc; border-radius: 10px; margin-bottom: 20px; font-size: 14px; outline: none; transition: 0.2s; }
+        .search-bar:focus { border-color: #8b1a1a; box-shadow: 0 0 0 3px rgba(139,26,26,0.1); }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; width: 100%; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; width: auto; padding: 10px 20px; }
+        
+        .history-section { margin-top: 25px; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .history-card { background: #fafafa; border: 1px solid #eeeeee; padding: 20px; border-radius: 12px; margin-bottom: 15px; position: relative; }
+        .badge-status { position: absolute; top: 15px; right: 15px; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+        .bg-pending { background: #fff3cd; color: #856404; }
+        .bg-acc { background: #d4edda; color: #155724; }
+        .bg-rejected { background: #ffebeb; color: #dc3545; }
+
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: #ffffff; padding: 30px; border-radius: 16px; width: 100%; max-width: 420px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-height: 90vh; overflow-y: auto; }
+        .input-nominal { width: 100%; padding: 16px; font-size: 28px; text-align: center; font-weight: 900; border: 2px solid #dcdcdc; border-radius: 10px; margin-bottom: 15px; outline: none; color: #1a1a1a; transition: 0.2s; }
+        .input-nominal:focus { border-color: #8b1a1a; }
+        
+        @media (max-width: 900px) { .container { flex-direction: column; } .menu-section, .cart-section { width: 100%; } .cart-section { position: relative; top: 0; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">
+            <h2>Order Stok Cabang</h2>
+            <span class="header-subtitle">Permintaan suplai etalase ke Pusat</span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="btn btn-outline">Kembali ke Kasir</button>
+    </div>
+
+    <div class="nav-tabs">
+        <a href="index.html">Kasir Utama</a>
+        <a href="kasir_waiting.html">Antrean KDS</a>
+        <a href="kasir_hold.html">Hold Tagihan</a>
+        <a href="kasir_booking.html">Booking</a>
+        <a href="kasir_order.html" class="active">Order Pusat</a>
+        <a href="kasir_riwayat.html">Riwayat</a>
+    </div>
+
+    <div class="container">
+        <div class="menu-section">
+            <h2 style="margin-bottom: 15px; font-size: 18px; color: #1a1a1a;">Katalog Etalase</h2>
+            <input type="text" id="search-menu" class="search-bar" placeholder="Ketik nama menu lalu tekan Enter..." autocomplete="off">
+            <div id="product-list" class="grid"><p style="color:#6e6e6e;">Memuat data...</p></div>
+        </div>
+
+        <div class="cart-section">
+            <h2 style="margin-bottom: 15px; font-size: 18px; color: #1a1a1a;">Keranjang Permintaan</h2>
+            <div id="cart-items" style="margin-bottom: 20px; color:#6e6e6e; max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                <p>Belum ada permintaan.</p>
+            </div>
+            <button onclick="kirimOrder()" class="btn btn-primary" id="btn-submit" style="padding: 18px; font-size: 16px;">Kirim Permintaan ke Pusat</button>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <h3 style="font-size: 18px; color: #1a1a1a; font-weight: 700; margin-bottom: 20px; border-bottom: 1px solid #eeeeee; padding-bottom: 15px;">Log Riwayat Permintaan & Penerimaan</h3>
+        <div id="riwayat-order">
+            <p style="color:#6e6e6e;">Memuat rekam jejak...</p>
+        </div>
+    </div>
+
+    <div id="modalInputQty" class="web-modal">
+        <div class="web-modal-content">
+            <h2 style="margin-top:0; color:#1a1a1a; margin-bottom: 10px;">Jumlah Order</h2>
+            <p style="font-size:20px; font-weight:700; margin-bottom: 20px; color:#8b1a1a;" id="nama-menu-qty"></p>
+            <div style="text-align:center; margin-bottom:20px;">
+                <label style="font-size:12px; font-weight:700; color:#6e6e6e; display:block; margin-bottom:5px;">KUANTITAS (PCS/BOX/PACK)</label>
+                <input type="number" id="input-qty-order" class="input-nominal" value="1" min="1">
+            </div>
+            <button id="btn-tambah-order" class="btn btn-primary" style="width:100%; margin-bottom:10px;" onclick="masukkanKeKeranjangOrder()">Tambahkan ke Keranjang</button>
+            <button class="btn btn-outline" style="width:100%; border-color:#dcdcdc; color:#6e6e6e;" onclick="tutupModal('modalInputQty')">Batal</button>
+        </div>
+    </div>
+
+    <div id="modalTerimaBarang" class="web-modal">
+        <div class="web-modal-content" style="max-width: 500px; padding: 25px;">
+            <h2 style="margin-top:0; color:#1a1a1a; margin-bottom: 10px; font-size: 20px;">Audit Penerimaan Fisik</h2>
+            <p style="font-size:13px; color:#6e6e6e; margin-bottom:20px;">Sesuaikan angka jika fisik barang yang datang kurang dari surat jalan.</p>
+            
+            <div id="list-terima-barang" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 15px; border-radius: 8px;"></div>
+            
+            <div id="container-alasan" style="display:none; text-align:left; margin-bottom:20px; background:#fff3cd; padding:15px; border-radius:8px; border:1px solid #ffeeba;">
+                <label style="font-size:12px; font-weight:800; color:#856404; display:block; margin-bottom:8px;">ALASAN SELISIH (WAJIB)</label>
+                <input type="text" id="alasan-selisih" style="width:100%; padding:12px; border:1px solid #dcdcdc; border-radius:6px; outline:none; font-family:inherit;" placeholder="Contoh: 5 pcs hancur di jalan / Pusat kurang kirim">
+            </div>
+
+            <button id="btn-proses-terima" class="btn btn-primary" style="width:100%; margin-bottom:10px; padding: 15px;" onclick="prosesTerimaBarang()">Konfirmasi Selesai & Tambah Stok</button>
+            <button class="btn btn-outline" style="width:100%; border-color:#dcdcdc; color:#6e6e6e;" onclick="tutupModal('modalTerimaBarang')">Batal</button>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const myBranch = localStorage.getItem('userBranch') || 'Pusat';
+        let products = [];
+        let cart = [];
+        let tempSelectedId = null;
+
+        // Variables for Terima Barang
+        let tempTerimaId = null;
+        let tempTerimaItems = [];
+
+        function tutupModal(id) {
+            document.getElementById(id).style.display = 'none';
+            document.getElementById('search-menu').focus();
+        }
+
+        // ================= BAGIAN 1: PEMBUATAN ORDER =================
+        async function loadCatalog() {
+            const { data, error } = await supabaseClient.from('products').select('*').order('name');
+            if (data) { products = data; renderCatalog(products); }
+        }
+
+        function renderCatalog(items) {
+            const list = document.getElementById('product-list'); list.innerHTML = ''; 
+            items.forEach(p => {
+                list.innerHTML += `
+                    <div class="card" onclick="bukaModalQty('${p.id}')">
+                        <h4>${p.name}</h4>
+                        <small style="color:#888;">Stok Tersedia: ${p.stock}</small>
+                    </div>`;
+            });
+        }
+
+        document.getElementById('search-menu').addEventListener('keyup', function(e) {
+            const val = this.value.trim().toLowerCase();
+            const cards = document.querySelectorAll('#product-list .card');
+            let firstVisible = null;
+
+            cards.forEach(card => {
+                const nameEl = card.querySelector('h4');
+                if(nameEl) {
+                    if (nameEl.innerText.toLowerCase().includes(val)) {
+                        card.style.display = '';
+                        if (!firstVisible) firstVisible = card;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+
+            if (e.key === 'Enter') {
+                if (val === '' && cart.length > 0) {
+                    kirimOrder();
+                } else if (firstVisible && val !== '') {
+                    firstVisible.click(); 
+                }
+            }
+        });
+
+        function bukaModalQty(id) {
+            const p = products.find(x => x.id == id);
+            if(!p) return;
+            
+            tempSelectedId = id;
+            document.getElementById('nama-menu-qty').innerText = p.name.toUpperCase();
+            
+            const inputQty = document.getElementById('input-qty-order');
+            inputQty.value = '1';
+            
+            document.getElementById('modalInputQty').style.display = 'flex';
+            setTimeout(() => { inputQty.focus(); inputQty.select(); }, 50);
+        }
+
+        document.getElementById('input-qty-order').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') masukkanKeKeranjangOrder();
+        });
+
+        function masukkanKeKeranjangOrder() {
+            let qty = parseInt(document.getElementById('input-qty-order').value);
+            if (isNaN(qty) || qty < 1) return alert("Kuantitas tidak valid!");
+
+            const p = products.find(x => x.id == tempSelectedId);
+            const ada = cart.find(i => i.id === p.id);
+            
+            if (ada) { ada.qty += qty; } else { cart.push({ ...p, qty: qty }); }
+            
+            tutupModal('modalInputQty');
+            renderCart();
+            
+            const searchInput = document.getElementById('search-menu');
+            searchInput.value = '';
+            document.querySelectorAll('#product-list .card').forEach(c => c.style.display = '');
+            searchInput.focus();
+        }
+
+        function updateQty(idx, change) { 
+            cart[idx].qty += change; 
+            if (cart[idx].qty <= 0) cart.splice(idx, 1); 
+            renderCart(); 
+        }
+
+        function renderCart() {
+            const cartItems = document.getElementById('cart-items'); cartItems.innerHTML = '';
+            if (cart.length === 0) return cartItems.innerHTML = '<p>Belum ada permintaan.</p>';
+            
+            cart.forEach((item, index) => {
+                cartItems.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px dashed #eee; padding-bottom:10px; align-items:center;">
+                        <div style="flex:2; padding-right:10px;">
+                            <strong style="font-size: 14px; color:#1a1a1a;">${item.name}</strong>
+                        </div>
+                        <div style="flex:1; display:flex; gap:5px; align-items:center; justify-content:flex-end;">
+                            <button onclick="updateQty(${index}, -1)" style="width:25px; height:25px; background:#e0e0e0; border-radius:4px; font-weight:bold; border:none; cursor:pointer;">-</button>
+                            <span style="width:30px; text-align:center; font-weight:800;">${item.qty}</span>
+                            <button onclick="updateQty(${index}, 1)" style="width:25px; height:25px; background:#e0e0e0; border-radius:4px; font-weight:bold; border:none; cursor:pointer;">+</button>
+                            <button onclick="updateQty(${index}, -${item.qty})" style="margin-left: 10px; background:none; color:#dc3545; font-size: 16px; border:none; cursor:pointer; font-weight:900;">&times;</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function kirimOrder() {
+            if (cart.length === 0) return alert("Keranjang permintaan kosong!");
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = 'Memproses...'; btn.disabled = true;
+            
+            try {
+                const { data, error } = await supabaseClient.from('order_cabang').insert([{ branch_name: myBranch, status: 'request' }]).select();
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    const orderId = data[0].id;
+                    const details = cart.map(item => ({ order_id: orderId, item_name: item.name, qty: item.qty }));
+                    const { error: errDetail } = await supabaseClient.from('order_cabang_detail').insert(details);
+                    if (errDetail) throw errDetail;
+                }
+                alert("Permintaan berhasil didistribusikan ke dasbor Pusat.");
+                cart = []; renderCart(); loadRiwayat(); document.getElementById('search-menu').focus();
+            } catch (err) { alert("Kegagalan sistem saat mendistribusikan permintaan."); } 
+            finally { btn.innerText = 'Kirim Permintaan ke Pusat'; btn.disabled = false; }
+        }
+
+        // ================= BAGIAN 2: PENERIMAAN FISIK (SMART AUDIT) =================
+        async function loadRiwayat() {
+            const { data, error } = await supabaseClient.from('order_cabang')
+                .select('*, order_cabang_detail(id, item_name, qty)')
+                .eq('branch_name', myBranch)
+                .order('created_at', { ascending: false });
+                
+            const list = document.getElementById('riwayat-order'); list.innerHTML = '';
+            if (error || !data || data.length === 0) return list.innerHTML = '<p style="color:#6e6e6e;">Belum ada log permintaan stok ke Pusat.</p>';
+
+            data.forEach(order => {
+                let badgeClass = 'bg-rejected'; let textStatus = 'Ditolak'; let btnAksi = '';
+                if (order.status === 'request') { badgeClass = 'bg-pending'; textStatus = 'Menunggu ACC'; }
+                else if (order.status === 'konfirmasi') { badgeClass = 'bg-acc'; textStatus = 'Selesai Diterima'; }
+                else if (order.status === 'dikirim') { 
+                    badgeClass = 'bg-pending'; textStatus = 'Dalam Perjalanan'; 
+                    const detailStr = encodeURIComponent(JSON.stringify(order.order_cabang_detail));
+                    btnAksi = `<button onclick="siapkanTerimaBarang('${order.id}', '${detailStr}')" class="btn btn-primary" style="margin-top:15px; width:100%;">Terima Barang & Audit</button>`;
+                }
+                
+                const tgl = new Date(order.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' });
+                
+                let detailTeks = '-';
+                if (order.order_cabang_detail && order.order_cabang_detail.length > 0) {
+                    detailTeks = order.order_cabang_detail.map(d => `• <strong style="color:#1a1a1a;">${d.qty}x</strong> ${d.item_name}`).join('<br>');
+                }
+                
+                list.innerHTML += `
+                    <div class="history-card" ${order.status==='konfirmasi' ? 'style="opacity:0.7;"' : ''}>
+                        <span class="badge-status ${badgeClass}">${textStatus}</span>
+                        <div style="font-size:12px; color:#6e6e6e; font-weight:600; margin-bottom:10px;">${tgl}</div>
+                        <div style="font-size:14px; color:#4a4a4a; line-height:1.6;">${detailTeks}</div>
+                        ${btnAksi}
+                    </div>
+                `;
+            });
+        }
+
+        function siapkanTerimaBarang(orderId, itemsStr) {
+            tempTerimaId = orderId;
+            tempTerimaItems = JSON.parse(decodeURIComponent(itemsStr));
+            
+            let html = '';
+            tempTerimaItems.forEach((item, idx) => {
+                html += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px dashed #eee; padding-bottom:10px;">
+                        <div style="flex:2; text-align:left; padding-right:10px;">
+                            <strong style="font-size:14px; color:#1a1a1a;">${item.item_name}</strong><br>
+                            <small style="color:#6e6e6e; font-weight:600;">Surat Jalan: ${item.qty} Pcs</small>
+                        </div>
+                        <div style="flex:1; text-align:right;">
+                            <input type="number" id="terima-qty-${idx}" style="width:70px; padding:10px; font-size:16px; font-weight:800; border:2px solid #dcdcdc; border-radius:6px; text-align:center; outline:none;" value="${item.qty}" min="0" max="${item.qty}" onkeyup="cekSelisih()" onchange="cekSelisih()">
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('list-terima-barang').innerHTML = html;
+            document.getElementById('container-alasan').style.display = 'none';
+            document.getElementById('alasan-selisih').value = '';
+            document.getElementById('modalTerimaBarang').style.display = 'flex';
+        }
+
+        function cekSelisih() {
+            let adaSelisih = false;
+            tempTerimaItems.forEach((item, idx) => {
+                let val = parseInt(document.getElementById(`terima-qty-${idx}`).value) || 0;
+                if (val < item.qty) adaSelisih = true;
+            });
+            document.getElementById('container-alasan').style.display = adaSelisih ? 'block' : 'none';
+        }
+
+        async function prosesTerimaBarang() {
+            const btn = document.getElementById('btn-proses-terima');
+            btn.innerText = 'Menyinkronkan Stok...'; btn.disabled = true;
+
+            let adaSelisih = false;
+            let alasan = document.getElementById('alasan-selisih').value.trim();
+            let updates = [];
+            let stockUpdates = [];
+
+            for (let i = 0; i < tempTerimaItems.length; i++) {
+                let item = tempTerimaItems[i];
+                let val = parseInt(document.getElementById(`terima-qty-${i}`).value);
+                if (isNaN(val) || val < 0) val = 0;
+                if (val > item.qty) val = item.qty; // Cegah input melebih order awal
+
+                if (val < item.qty) adaSelisih = true;
+                
+                updates.push({ id: item.id, item_name: item.item_name, original_qty: item.qty, received_qty: val });
+                stockUpdates.push({ name: item.item_name, add_qty: val });
+            }
+
+            if (adaSelisih && !alasan) {
+                alert("Harap isi Alasan Selisih sebagai bentuk tanggung jawab laporan!");
+                btn.innerText = 'Konfirmasi Selesai & Tambah Stok'; btn.disabled = false;
+                return;
+            }
+
+            try {
+                // 1. Ubah Status Header ke Konfirmasi
+                await supabaseClient.from('order_cabang').update({ status: 'konfirmasi' }).eq('id', tempTerimaId);
+
+                // 2. Injeksi Keterangan Selisih ke Item & Update Stok Fisik
+                for (let i = 0; i < updates.length; i++) {
+                    let up = updates[i];
+                    let finalName = up.item_name;
+                    
+                    if (up.received_qty < up.original_qty) {
+                        finalName += ` [Diterima: ${up.received_qty}/${up.original_qty}] (Selisih: ${alasan})`;
+                        await supabaseClient.from('order_cabang_detail').update({ item_name: finalName }).eq('id', up.id);
+                    }
+
+                    // Tambah stok ke database products by Name
+                    let su = stockUpdates[i];
+                    if (su.add_qty > 0) {
+                        const { data: prodData } = await supabaseClient.from('products').select('id, stock').eq('name', su.name).single();
+                        if (prodData) {
+                            await supabaseClient.from('products').update({ stock: prodData.stock + su.add_qty }).eq('id', prodData.id);
+                            await supabaseClient.from('stock_logs').insert([{ product_id: prodData.id, change_qty: su.add_qty, reason: 'restock_dari_pusat' }]);
+                        }
+                    }
+                }
+
+                alert("Audit Selesai. Fisik barang tercatat dan stok cabang telah ditambahkan.");
+                tutupModal('modalTerimaBarang');
+                loadRiwayat();
+                loadCatalog(); // Refresh stok terkini
+            } catch (err) {
+                console.error(err);
+                alert("Gagal memproses penerimaan ke server.");
+            } finally {
+                btn.innerText = 'Konfirmasi Selesai & Tambah Stok'; btn.disabled = false;
+            }
+        }
+
+        window.onload = () => {
+            loadCatalog();
+            loadRiwayat();
+            document.getElementById('search-menu').focus();
+        };
+    </script>
+</body>
+</html>

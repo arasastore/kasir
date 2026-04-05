@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Produksi - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 24px; color: #1a1a1a; font-weight: 800; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; display: block; margin-top: 4px; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-outline:hover { background: #8b1a1a; color: #ffffff; }
+        .nav-pills { display: flex; gap: 15px; margin-bottom: 25px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; padding-bottom: 5px; }
+        .nav-pills::-webkit-scrollbar { display: none; }
+        .nav-pills button { padding: 12px 25px; border: 1px solid #dcdcdc; border-radius: 30px; background: #ffffff; color: #6e6e6e; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .nav-pills button.active { background: #8b1a1a; color: #ffffff; border-color: #8b1a1a; }
+        .section-card { display: none; }
+        .section-card.active { display: block; }
+        .search-bar { width: 100%; padding: 16px 20px; border: 1px solid #dcdcdc; border-radius: 12px; margin-bottom: 20px; font-size: 15px; outline: none; transition: 0.2s; background: #ffffff; }
+        .search-bar:focus { border-color: #8b1a1a; box-shadow: 0 0 0 4px rgba(139,26,26,0.05); }
+        .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card-item { background: #ffffff; border: 1px solid #eeeeee; padding: 20px 15px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; justify-content: center; min-height: 120px; }
+        .card-item:hover { border-color: #8b1a1a; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(139,26,26,0.08); }
+        .card-item h4 { margin: 0 0 8px 0; font-size: 15px; color: #1a1a1a; font-weight: 700; line-height: 1.4; }
+        .card-item span { font-size: 13px; color: #6e6e6e; font-weight: 600; }
+        .val-stock { font-size: 18px; font-weight: 800; color: #8b1a1a; margin-top: 5px; display: block; }
+        .split-layout { display: flex; gap: 25px; align-items: flex-start; }
+        .main-col { flex: 3; }
+        .side-col { flex: 1.5; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: sticky; top: 20px; border: 1px solid #eeeeee; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; padding: 16px; border: none; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; width: 100%; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-danger { background: #ffebeb; color: #dc3545; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; }
+        .draft-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; max-height: 40vh; overflow-y: auto; }
+        .draft-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #eeeeee; border-radius: 10px; background: #fafafa; }
+        .draft-name { font-weight: 700; color: #1a1a1a; font-size: 14px; display: block; margin-bottom: 4px; }
+        .draft-qty { color: #8b1a1a; font-size: 13px; font-weight: 700; }
+        .web-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
+        .web-modal-content { background: #ffffff; padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .input-nominal { width: 100%; padding: 16px; font-size: 24px; text-align: center; font-weight: 800; border: 2px solid #eeeeee; border-radius: 12px; margin-bottom: 15px; outline: none; color: #1a1a1a; }
+        .input-nominal:focus { border-color: #8b1a1a; }
+        .form-select { width: 100%; padding: 15px; font-size: 15px; font-weight: 600; border: 2px solid #eeeeee; border-radius: 12px; margin-bottom: 20px; outline: none; color: #2b2b2b; }
+        .form-select:focus { border-color: #8b1a1a; }
+        .table-responsive { width: 100%; overflow-x: auto; background: #ffffff; border-radius: 16px; border: 1px solid #eeeeee; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; }
+        th { font-weight: 700; color: #6e6e6e; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; font-weight: 600; }
+        .badge-status { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-proses { background: #e3f2fd; color: #007bff; }
+        .status-selesai { background: #d4edda; color: #155724; }
+        @media (max-width: 900px) { .split-layout { flex-direction: column; } .main-col, .side-col { width: 100%; } .side-col { position: relative; top: 0; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Ruang Komando Produksi</h2>
+                <span id="dapur-info" class="header-subtitle">Memuat otorisasi...</span>
+            </div>
+            <button onclick="logout()" class="btn-outline">Logout Eksekutor</button>
+        </div>
+
+        <div class="nav-pills">
+            <button class="active" onclick="switchTab('sec-belanja', this)">Order Belanja</button>
+            <button onclick="switchTab('sec-hasil', this)">Hasil Produksi</button>
+            <button onclick="switchTab('sec-opname', this)">Opname Fisik</button>
+            <button onclick="switchTab('sec-transfer', this)">Mutasi Bahan</button>
+        </div>
+
+        <div id="sec-belanja" class="section-card active">
+            <div class="split-layout">
+                <div class="main-col">
+                    <input type="text" id="search-belanja" class="search-bar" placeholder="Pencarian katalog bahan baku..." onkeyup="filterGrid('belanja')">
+                    <div id="grid-belanja" class="grid-cards"><div style="color:#6e6e6e; text-align:center; grid-column:1/-1;">Memuat katalog...</div></div>
+                    <div class="table-responsive">
+                        <h3 style="margin: 0 0 20px 0; font-size: 16px; color: #1a1a1a;">Riwayat Distribusi Order</h3>
+                        <table>
+                            <thead><tr><th>Waktu Rekam</th><th>Rincian Komoditas</th><th>Status Otorisasi</th></tr></thead>
+                            <tbody id="history-belanja"><tr><td colspan="3" style="text-align:center; color:#6e6e6e;">Memuat log...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="side-col">
+                    <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #1a1a1a; border-bottom: 1px solid #eee; padding-bottom: 15px;">Draf Eksekusi</h3>
+                    <div id="draft-container" class="draft-list"><div style="text-align:center; color:#6e6e6e; padding: 20px 0; font-size: 13px;">Draf masih kosong.</div></div>
+                    <button onclick="kirimOrderBelanja()" class="btn-primary" id="btn-submit-order">Kirim Order ke Pusat</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-hasil" class="section-card">
+            <input type="text" id="search-hasil" class="search-bar" placeholder="Pencarian menu matang..." onkeyup="filterGrid('hasil')">
+            <div id="grid-hasil" class="grid-cards"><div style="color:#6e6e6e; text-align:center; grid-column:1/-1;">Memuat katalog menu...</div></div>
+        </div>
+
+        <div id="sec-opname" class="section-card">
+            <input type="text" id="search-opname" class="search-bar" placeholder="Pencarian bahan baku untuk divalidasi..." onkeyup="filterGrid('opname')">
+            <div id="grid-opname" class="grid-cards"><div style="color:#6e6e6e; text-align:center; grid-column:1/-1;">Memuat inventaris...</div></div>
+        </div>
+
+        <div id="sec-transfer" class="section-card">
+            <input type="text" id="search-transfer" class="search-bar" placeholder="Pencarian bahan baku untuk dimutasi..." onkeyup="filterGrid('transfer')">
+            <div id="grid-transfer" class="grid-cards"><div style="color:#6e6e6e; text-align:center; grid-column:1/-1;">Memuat katalog...</div></div>
+        </div>
+    </div>
+
+    <div id="modalBelanja" class="web-modal"><div class="web-modal-content"><h3 style="margin:0 0 5px 0; color:#6e6e6e; font-size:14px; text-transform:uppercase;">Kuantitas Belanja</h3><h2 id="teks-nama-belanja" style="margin:0 0 25px 0; color:#1a1a1a; font-size:22px;"></h2><input type="hidden" id="in-nama-belanja"><input type="number" id="in-qty-belanja" class="input-nominal" value="0" min="1"><select id="in-unit-belanja" class="form-select"><option value="KG">Kilogram (KG)</option><option value="Gram">Gram</option><option value="Liter">Liter (L)</option><option value="Pcs">Pieces (Pcs)</option><option value="Pax">Pack (Pax)</option></select><div style="display:flex; gap:10px;"><button onclick="simpanKeDraft()" class="btn-primary" style="flex:2;">Tambahkan</button><button onclick="tutupModal('modalBelanja')" class="btn-primary" style="flex:1; background:#eeeeee; color:#1a1a1a;">Batal</button></div></div></div>
+    
+    <div id="modalHasil" class="web-modal"><div class="web-modal-content"><h3 style="margin:0 0 5px 0; color:#6e6e6e; font-size:14px; text-transform:uppercase;">Total Matang</h3><h2 id="teks-nama-hasil" style="margin:0 0 25px 0; color:#1a1a1a; font-size:22px;"></h2><input type="hidden" id="in-id-hasil"><input type="hidden" id="in-stock-hasil"><input type="hidden" id="in-nama-hasil-hidden"><input type="number" id="in-qty-hasil" class="input-nominal" value="0" min="1"><div style="display:flex; gap:10px;"><button onclick="eksekusiHasil()" class="btn-primary" style="flex:2;" id="btn-eks-hasil">Setor Produksi</button><button onclick="tutupModal('modalHasil')" class="btn-primary" style="flex:1; background:#eeeeee; color:#1a1a1a;">Batal</button></div></div></div>
+    
+    <div id="modalOpname" class="web-modal"><div class="web-modal-content"><h3 style="margin:0 0 5px 0; color:#6e6e6e; font-size:14px; text-transform:uppercase;">Validasi Fisik Gudang Dapur</h3><h2 id="teks-nama-opname" style="margin:0 0 5px 0; color:#1a1a1a; font-size:22px;"></h2><p style="margin:0 0 20px 0; color:#8b1a1a; font-weight:700;">Stok Sistem: <span id="teks-stok-opname"></span></p><input type="hidden" id="in-id-opname"><input type="hidden" id="in-nama-opname"><input type="hidden" id="in-stok-opname"><input type="number" id="in-qty-opname" class="input-nominal" value="0" min="0"><div style="display:flex; gap:10px;"><button onclick="eksekusiOpname()" class="btn-primary" style="flex:2;" id="btn-eks-opname">Simpan Fisik</button><button onclick="tutupModal('modalOpname')" class="btn-primary" style="flex:1; background:#eeeeee; color:#1a1a1a;">Batal</button></div></div></div>
+    
+    <div id="modalTransfer" class="web-modal"><div class="web-modal-content"><h3 style="margin:0 0 5px 0; color:#6e6e6e; font-size:14px; text-transform:uppercase;">Mutasi Bahan</h3><h2 id="teks-nama-transfer" style="margin:0 0 25px 0; color:#1a1a1a; font-size:22px;"></h2><input type="hidden" id="in-nama-transfer"><select id="in-dest-transfer" class="form-select"><option value="P1">Tujuan: Dapur P1</option><option value="P3">Tujuan: Dapur P3</option><option value="P4">Tujuan: Dapur P4</option><option value="Goreng">Tujuan: Dapur Goreng</option></select><input type="number" id="in-qty-transfer" class="input-nominal" value="0" min="1"><div style="display:flex; gap:10px;"><button onclick="eksekusiTransfer()" class="btn-primary" style="flex:2;" id="btn-eks-transfer">Proses Mutasi</button><button onclick="tutupModal('modalTransfer')" class="btn-primary" style="flex:1; background:#eeeeee; color:#1a1a1a;">Batal</button></div></div></div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        const myRole = (localStorage.getItem('userRole') || '').toLowerCase().trim();
+        if (!myRole.startsWith('produksi_p')) window.location.href = 'login.html';
+        const myDapurLokasi = myRole.replace('produksi_', '').toUpperCase();
+        document.getElementById('dapur-info').innerText = `Otoritas: Divisi Produksi | Zona: Dapur ${myDapurLokasi}`;
+
+        let masterDataGlobal = []; let productDataGlobal = []; let stockDataGlobal = []; let draftBelanja = [];
+
+        function switchTab(id, btn) {
+            document.querySelectorAll('.section-card').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-pills button').forEach(e => e.classList.remove('active'));
+            document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        }
+
+        function tutupModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function initDataCore() {
+            const [resMaster, resProd, resStock] = await Promise.all([
+                supabaseClient.from('inventaris_master').select('*').order('name', { ascending: true }),
+                supabaseClient.from('products').select('*').order('name', { ascending: true }),
+                supabaseClient.from('stok_gudang').select('*').eq('location', myDapurLokasi)
+            ]);
+            if(resMaster.data) masterDataGlobal = resMaster.data;
+            if(resProd.data) productDataGlobal = resProd.data;
+            if(resStock.data) stockDataGlobal = resStock.data;
+
+            renderGridAll();
+            loadHistoryBelanja();
+        }
+
+        function renderGridAll() { filterGrid('belanja'); filterGrid('hasil'); filterGrid('opname'); filterGrid('transfer'); }
+
+        function filterGrid(type) {
+            const key = document.getElementById(`search-${type}`).value.toLowerCase();
+            const container = document.getElementById(`grid-${type}`);
+            container.innerHTML = '';
+
+            if (type === 'hasil') {
+                const filtered = productDataGlobal.filter(p => p.name.toLowerCase().includes(key));
+                filtered.forEach(p => {
+                    container.innerHTML += `<div class="card-item" onclick="bukaModalHasil('${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.stock})"><h4>${p.name}</h4><span>Etalase: <b style="color:#8b1a1a;">${p.stock}</b></span></div>`;
+                });
+            } else {
+                const filtered = masterDataGlobal.filter(m => m.name.toLowerCase().includes(key));
+                filtered.forEach(m => {
+                    const stockObj = stockDataGlobal.find(s => s.item_id === m.id);
+                    const qty = stockObj ? stockObj.qty : 0;
+                    if (type === 'belanja') {
+                        container.innerHTML += `<div class="card-item" onclick="bukaModalBelanja('${m.name.replace(/'/g, "\\'")}', '${m.unit}')"><h4>${m.name}</h4><span>${m.unit}</span></div>`;
+                    } else if (type === 'opname') {
+                        container.innerHTML += `<div class="card-item" onclick="bukaModalOpname('${m.id}', '${m.name.replace(/'/g, "\\'")}', ${qty}, '${m.unit}')"><h4>${m.name}</h4><span class="val-stock">${qty} <small style="color:#6e6e6e; font-size:12px;">${m.unit}</small></span></div>`;
+                    } else if (type === 'transfer') {
+                        container.innerHTML += `<div class="card-item" onclick="bukaModalTransfer('${m.name.replace(/'/g, "\\'")}', ${qty}, '${m.unit}')"><h4>${m.name}</h4><span>Sisa: <b style="color:#8b1a1a;">${qty}</b> ${m.unit}</span></div>`;
+                    }
+                });
+            }
+        }
+
+        // ================= ALUR BELANJA =================
+        function bukaModalBelanja(nama, unit) {
+            document.getElementById('teks-nama-belanja').innerText = nama; document.getElementById('in-nama-belanja').value = nama;
+            document.getElementById('in-qty-belanja').value = ''; document.getElementById('in-unit-belanja').value = unit || 'KG';
+            document.getElementById('modalBelanja').style.display = 'flex'; setTimeout(() => document.getElementById('in-qty-belanja').focus(), 100);
+        }
+        function simpanKeDraft() {
+            const name = document.getElementById('in-nama-belanja').value; const qty = document.getElementById('in-qty-belanja').value; const unit = document.getElementById('in-unit-belanja').value;
+            if (qty <= 0) return alert("Kuantitas tidak valid.");
+            draftBelanja.push({ name, qty, unit }); renderDraftBelanja(); tutupModal('modalBelanja');
+        }
+        function renderDraftBelanja() {
+            const cont = document.getElementById('draft-container'); cont.innerHTML = '';
+            if (draftBelanja.length === 0) return cont.innerHTML = '<div style="text-align:center; color:#6e6e6e; padding: 20px 0; font-size: 13px;">Draf masih kosong.</div>';
+            draftBelanja.forEach((d, i) => { cont.innerHTML += `<div class="draft-item"><div><span class="draft-name">${d.name}</span><span class="draft-qty">${d.qty} ${d.unit}</span></div><button onclick="hapusDraft(${i})" class="btn-danger">X</button></div>`; });
+        }
+        function hapusDraft(i) { draftBelanja.splice(i, 1); renderDraftBelanja(); }
+        
+        async function kirimOrderBelanja() {
+            if (draftBelanja.length === 0) return;
+            const btn = document.getElementById('btn-submit-order'); btn.innerText = 'Memproses...'; btn.disabled = true;
+            try {
+                const { data } = await supabaseClient.from('belanja_harian').insert([{ location: myDapurLokasi, status: 'pending' }]).select();
+                if (data && data.length > 0) {
+                    for (let d of draftBelanja) await supabaseClient.from('belanja_detail').insert([{ belanja_id: data[0].id, item_name: d.name, qty_req: d.qty, unit: d.unit }]);
+                    
+                    // INJEKSI CCTV NOTIFIKASI
+                    await supabaseClient.from('notifications').insert([{
+                        title: '🛒 Order Belanja Dapur',
+                        message: `Dapur ${myDapurLokasi} mengajukan order belanja bahan baku baru.`,
+                        is_read: false
+                    }]);
+
+                    draftBelanja = []; renderDraftBelanja(); loadHistoryBelanja(); tutupModal('modalBelanja');
+                }
+            } catch(e) {} finally { btn.innerText = 'Kirim Order ke Pusat'; btn.disabled = false; }
+        }
+        async function loadHistoryBelanja() {
+            const { data } = await supabaseClient.from('belanja_harian').select('*, belanja_detail(*)').eq('location', myDapurLokasi).order('created_at', { ascending: false }).limit(10);
+            const tbody = document.getElementById('history-belanja'); tbody.innerHTML = '';
+            if (data && data.length > 0) data.forEach(h => {
+                let items = h.belanja_detail.map(d => `${d.item_name} (${d.qty_req} ${d.unit})`).join(', ');
+                let statusClass = h.status === 'pending' ? 'status-pending' : (h.status === 'proses' ? 'status-proses' : 'status-selesai');
+                tbody.innerHTML += `<tr><td style="color:#6e6e6e;">${new Date(h.created_at).toLocaleString('id-ID')}</td><td style="line-height:1.5;">${items}</td><td><span class="badge-status ${statusClass}">${h.status}</span></td></tr>`;
+            });
+            else tbody.innerHTML = '<tr><td colspan=\"3\" style=\"text-align:center; color:#6e6e6e;\">Belum ada log.</td></tr>';
+        }
+
+        // ================= ALUR HASIL PRODUKSI (KUE MATANG) =================
+        function bukaModalHasil(id, nama, stok) {
+            document.getElementById('teks-nama-hasil').innerText = nama; document.getElementById('in-id-hasil').value = id;
+            document.getElementById('in-stock-hasil').value = stok; document.getElementById('in-nama-hasil-hidden').value = nama;
+            document.getElementById('in-qty-hasil').value = '';
+            document.getElementById('modalHasil').style.display = 'flex'; setTimeout(() => document.getElementById('in-qty-hasil').focus(), 100);
+        }
+        async function eksekusiHasil() {
+            const id = document.getElementById('in-id-hasil').value; 
+            const qty = Number(document.getElementById('in-qty-hasil').value); 
+            const old = Number(document.getElementById('in-stock-hasil').value);
+            const namaProd = document.getElementById('in-nama-hasil-hidden').value;
+            if (qty <= 0) return alert("Kuantitas tidak valid.");
+            
+            const btn = document.getElementById('btn-eks-hasil'); btn.innerText = 'Memproses...'; btn.disabled = true;
+            try {
+                await supabaseClient.from('products').update({ stock: old + qty }).eq('id', id);
+                await supabaseClient.from('stock_logs').insert([{ product_id: id, change_qty: qty, reason: `produksi_dapur_${myDapurLokasi}` }]);
+                
+                // INJEKSI CCTV NOTIFIKASI
+                await supabaseClient.from('notifications').insert([{
+                    title: '🍳 Hasil Produksi Disetor',
+                    message: `Dapur ${myDapurLokasi} telah menyetorkan ${qty} Pcs [${namaProd}] ke Etalase Pusat.`,
+                    is_read: false
+                }]);
+
+                tutupModal('modalHasil'); await initDataCore();
+            } catch(e) { alert("Gagal menyetor hasil produksi."); } finally { btn.innerText = 'Setor Produksi'; btn.disabled = false; }
+        }
+
+        // ================= ALUR OPNAME FISIK GUDANG DAPUR =================
+        function bukaModalOpname(id, nama, stok, unit) {
+            document.getElementById('teks-nama-opname').innerText = nama; document.getElementById('teks-stok-opname').innerText = `${stok} ${unit}`;
+            document.getElementById('in-id-opname').value = id; document.getElementById('in-nama-opname').value = nama; document.getElementById('in-stok-opname').value = stok;
+            document.getElementById('in-qty-opname').value = stok; document.getElementById('modalOpname').style.display = 'flex';
+            setTimeout(() => { const inp = document.getElementById('in-qty-opname'); inp.focus(); inp.select(); }, 100);
+        }
+        async function eksekusiOpname() {
+            const id = document.getElementById('in-id-opname').value; const qty = Number(document.getElementById('in-qty-opname').value); const old = Number(document.getElementById('in-stok-opname').value);
+            const namaBahan = document.getElementById('in-nama-opname').value;
+            if (qty < 0) return alert("Angka riil tidak boleh minus.");
+            if (qty === old) return tutupModal('modalOpname');
+            const btn = document.getElementById('btn-eks-opname'); btn.innerText = 'Memproses...'; btn.disabled = true;
+            try {
+                const { data: c } = await supabaseClient.from('stok_gudang').select('id').eq('location', myDapurLokasi).eq('item_id', id).maybeSingle();
+                if (c) await supabaseClient.from('stok_gudang').update({ qty: qty }).eq('id', c.id);
+                else await supabaseClient.from('stok_gudang').insert([{ location: myDapurLokasi, item_id: id, qty: qty }]);
+                
+                // LOG KE NOTIFIKASI SAJA AGAR TIDAK MERUSAK LAPORAN ADMIN TAB 3
+                await supabaseClient.from('notifications').insert([{
+                    title: '📦 Audit Gudang Dapur',
+                    message: `Dapur ${myDapurLokasi} melakukan penyesuaian fisik bahan [${namaBahan}]. Dari ${old} menjadi ${qty}.`,
+                    is_read: false
+                }]);
+
+                tutupModal('modalOpname'); await initDataCore();
+            } catch(e) {} finally { btn.innerText = 'Simpan Fisik'; btn.disabled = false; }
+        }
+
+        // ================= ALUR MUTASI ANTAR DAPUR =================
+        function bukaModalTransfer(nama, stok, unit) {
+            document.getElementById('teks-nama-transfer').innerText = nama; document.getElementById('in-nama-transfer').value = nama;
+            document.getElementById('in-qty-transfer').value = ''; document.getElementById('modalTransfer').style.display = 'flex';
+            setTimeout(() => document.getElementById('in-qty-transfer').focus(), 100);
+        }
+        async function eksekusiTransfer() {
+            const dest = document.getElementById('in-dest-transfer').value; const name = document.getElementById('in-nama-transfer').value; const qty = document.getElementById('in-qty-transfer').value;
+            if (dest === myDapurLokasi) return alert("Mutasi ke titik yang sama dilarang sistem.");
+            if (qty <= 0) return alert("Kuantitas tidak valid.");
+            const btn = document.getElementById('btn-eks-transfer'); btn.innerText = 'Memproses...'; btn.disabled = true;
+            try {
+                await supabaseClient.from('mutasi_internal').insert([{ from_location: myDapurLokasi, to_location: dest, item_name: name, qty: qty, status: 'completed' }]);
+                
+                // INJEKSI CCTV NOTIFIKASI
+                await supabaseClient.from('notifications').insert([{
+                    title: '🔄 Mutasi Bahan Internal',
+                    message: `Dapur ${myDapurLokasi} telah memutasi sejumlah ${qty} [${name}] ke Dapur ${dest}.`,
+                    is_read: false
+                }]);
+
+                tutupModal('modalTransfer');
+            } catch(e) {} finally { btn.innerText = 'Proses Mutasi'; btn.disabled = false; }
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        initDataCore();
+    </script>
+</body>
+</html>

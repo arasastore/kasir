@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stok Etalase - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        .badge-count { background: #8b1a1a; color: #ffffff; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 6px; display: none; vertical-align: middle; }
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        .filter-box { margin-bottom: 20px; }
+        .form-control { width: 100%; max-width: 300px; padding: 12px 15px; border: 1px solid #dcdcdc; border-radius: 8px; font-size: 14px; color: #2b2b2b; outline: none; background: #fff; }
+        .btn-outline { background: transparent; color: #8b1a1a; border: 1px solid #8b1a1a; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-outline:hover { background: #f9f9f9; }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        @media (max-width: 768px) { .header { flex-direction: column; align-items: flex-start; gap: 15px; } .header .btn-outline { width: 100%; } .form-control { max-width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Manajemen Stok Toko (Etalase)</h2>
+                <span id="user-info" class="header-subtitle">Pemantauan produk siap jual</span>
+            </div>
+            <button onclick="logout()" class="btn-outline">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html" class="active">Stok Etalase</a>
+            <a href="admin_laporan.html">Laporan</a>
+            <a href="admin_order.html">Order Cabang <span id="badge-order" class="badge-count"></span></a>
+            <a href="admin_req_dapur.html">Req Dapur <span id="badge-dapur" class="badge-count"></span></a>
+            <a href="admin_req_trx.html">Req Transaksi <span id="badge-trx" class="badge-count"></span></a>
+            <a href="admin_akun.html">Manajemen Akun</a>
+            <a href="admin_setting.html">Pengaturan</a>
+        </div>
+
+        <div class="card">
+            <div class="filter-box">
+                <input type="text" id="search-toko" class="form-control" placeholder="Cari nama produk etalase..." onkeyup="filterToko()">
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Nama Produk Penjualan</th><th>Kategori</th><th>Sisa Fisik Etalase (Sistem Kasir)</th></tr></thead>
+                    <tbody id="toko-body"><tr><td colspan="3" style="text-align:center; color:#6e6e6e;">Memuat data...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') window.location.href = 'login.html';
+        document.getElementById('user-info').innerText = `Otoritas: Admin Pusat | Area: Arasa Global`;
+
+        let dataEtalase = [];
+
+        async function loadStokToko() {
+            // MENGAMBIL DARI TABEL PRODUCTS (KHUSUS YANG READY/ETALASE)
+            const { data } = await supabaseClient.from('products').select('*').eq('type', 'ready').order('name', { ascending: true });
+            const tbody = document.getElementById('toko-body'); tbody.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                dataEtalase = data;
+                renderTabelToko(dataEtalase);
+            } else { 
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#6e6e6e;">Data stok etalase kosong.</td></tr>'; 
+            }
+            updateBadges();
+        }
+
+        function renderTabelToko(data) {
+            const tbody = document.getElementById('toko-body'); tbody.innerHTML = '';
+            data.forEach(s => {
+                let colorClass = s.stock <= 5 ? '#dc3545' : '#2e7d32'; // Merah jika stok menipis
+                tbody.innerHTML += `<tr><td style="font-weight:700; color:#1a1a1a;">${s.name}</td><td><span style="background:#eef; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">PRODUK ${s.type.toUpperCase()}</span></td><td style="font-size:18px; font-weight:800; color:${colorClass};">${s.stock} Pcs</td></tr>`;
+            });
+        }
+
+        function filterToko() {
+            const keyword = document.getElementById('search-toko').value.toLowerCase();
+            const filtered = dataEtalase.filter(item => item.name.toLowerCase().includes(keyword));
+            renderTabelToko(filtered);
+        }
+
+        async function updateBadges() {
+            try {
+                const { count: cOrder } = await supabaseClient.from('order_cabang').select('*', { count: 'exact', head: true }).eq('status', 'request');
+                const { count: cDapur } = await supabaseClient.from('belanja_harian').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const { count: cTrx } = await supabaseClient.from('request_trx').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+                const setB = (id, v) => { const e = document.getElementById(id); if(e){ e.innerText = v > 99 ? '99+' : v; e.style.display = v > 0 ? 'inline-block' : 'none'; } };
+                setB('badge-order', cOrder); setB('badge-dapur', cDapur); setB('badge-trx', cTrx);
+            } catch(e) {}
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        loadStokToko();
+    </script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Komprehensif - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; color: #2b2b2b; font-size: 14px; line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 20px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; border-left: 6px solid #8b1a1a; }
+        .header-title h2 { font-size: 22px; color: #1a1a1a; font-weight: 700; letter-spacing: 0.5px; }
+        .header-subtitle { color: #6e6e6e; font-size: 13px; font-weight: 600; margin-top: 4px; display: block; }
+        .nav-tabs { display: flex; gap: 25px; margin-bottom: 25px; border-bottom: 1px solid #e0e0e0; padding-bottom: 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+        .nav-tabs::-webkit-scrollbar { display: none; }
+        .nav-tabs a { text-decoration: none; color: #6e6e6e; font-weight: 600; font-size: 14px; transition: 0.3s; position: relative; padding-bottom: 12px; }
+        .nav-tabs a:hover, .nav-tabs a.active { color: #8b1a1a; }
+        .nav-tabs a.active::after { content: ''; position: absolute; bottom: -13px; left: 0; width: 100%; height: 3px; background-color: #8b1a1a; border-radius: 3px 3px 0 0; }
+        
+        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 25px; }
+        
+        /* FILTER SECTION */
+        .filter-bar { display: flex; gap: 15px; align-items: flex-end; margin-bottom: 25px; background: #fafafa; padding: 15px; border-radius: 10px; border: 1px solid #eeeeee; flex-wrap: wrap; justify-content: space-between; }
+        .filter-group-container { display: flex; gap: 15px; flex-wrap: wrap; flex: 1; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+        .filter-group label { font-size: 12px; font-weight: 700; color: #6e6e6e; text-transform: uppercase; }
+        .form-control { padding: 10px 15px; border: 1px solid #dcdcdc; border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; }
+        .form-control:focus { border-color: #8b1a1a; }
+        .btn-action-container { display: flex; gap: 10px; align-items: flex-end; }
+        .btn-primary { background: #8b1a1a; color: #ffffff; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; height: 42px; transition: 0.2s; }
+        .btn-primary:hover { background: #6b1414; }
+        .btn-outline { background: #ffffff; color: #8b1a1a; border: 1px solid #8b1a1a; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 42px; transition: 0.2s; }
+        .btn-outline:hover { background: #f9f9f9; }
+
+        /* INTERNAL TABS (SUB-MENU) */
+        .sub-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .sub-btn { background: transparent; border: none; font-size: 15px; font-weight: 700; color: #6e6e6e; cursor: pointer; padding: 8px 15px; border-radius: 6px; transition: 0.2s; }
+        .sub-btn:hover { background: #f4f6f8; color: #1a1a1a; }
+        .sub-btn.active { background: #8b1a1a; color: #fff; }
+
+        /* METRICS GRID */
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .metric-card { background: #fff; padding: 20px; border-radius: 10px; border: 1px solid #eee; position: relative; overflow: hidden; }
+        .metric-card::before { content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%; }
+        .metric-card.omset::before { background: #0288d1; }
+        .metric-card.hpp::before { background: #f57f17; }
+        .metric-card.expense::before { background: #dc3545; }
+        .metric-card.profit::before { background: #2e7d32; }
+        .metric-title { font-size: 12px; font-weight: 700; color: #6e6e6e; text-transform: uppercase; margin-bottom: 8px; }
+        .metric-value { font-size: 24px; font-weight: 800; color: #1a1a1a; }
+        
+        /* TABLE */
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eeeeee; }
+        th { background: #fafafa; font-weight: 600; color: #4a4a4a; font-size: 13px; text-transform: uppercase; }
+        td { font-size: 14px; color: #2b2b2b; }
+        .badge-status { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .bg-in { background: #d4edda; color: #155724; }
+        .bg-out { background: #ffebeb; color: #dc3545; }
+        .bg-neutral { background: #e3f2fd; color: #007bff; }
+
+        /* SECTION TOGGLER */
+        .laporan-section { display: none; }
+        .laporan-section.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 900px) { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .metrics-grid { grid-template-columns: 1fr; } .sub-tabs { flex-wrap: wrap; } .btn-action-container { width: 100%; } .btn-action-container button { flex: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h2>Pusat Laporan Global</h2>
+                <span id="user-info" class="header-subtitle">Analisis Finansial, Logistik, & Operasional</span>
+            </div>
+            <button onclick="logout()" class="btn-outline" style="border: none; background: transparent;">Logout Sistem</button>
+        </div>
+
+        <div class="nav-tabs">
+            <a href="admin.html">Dashboard</a>
+            <a href="admin_kas.html">Buku Kas</a>
+            <a href="admin_menu.html">Menu & Stok</a>
+            <a href="admin_gudang.html">Stok Gudang</a>
+            <a href="admin_toko.html">Stok Etalase</a>
+            <a href="admin_laporan.html" class="active">Laporan</a>
+            <a href="admin_order.html">Order Cabang</a>
+            <a href="admin_req_dapur.html">Req Dapur</a>
+            <a href="admin_req_trx.html">Req Transaksi</a>
+        </div>
+
+        <div class="card">
+            <div class="filter-bar">
+                <div class="filter-group-container">
+                    <div class="filter-group">
+                        <label>Mulai Tanggal</label>
+                        <input type="date" id="date-start" class="form-control">
+                    </div>
+                    <div class="filter-group">
+                        <label>Sampai Tanggal</label>
+                        <input type="date" id="date-end" class="form-control">
+                    </div>
+                    <div class="filter-group">
+                        <label>Cabang / Area</label>
+                        <select id="filter-branch" class="form-control">
+                            <option value="Semua">Semua Area (Global)</option>
+                            <option value="Pusat">Arasa Pusat</option>
+                            <option value="Gatoel">Arasa Gatoel</option>
+                            <option value="Stasiun">Arasa Stasiun</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="btn-action-container">
+                    <button onclick="tarikSemuaData()" class="btn-primary" id="btn-kalkulasi">🔄 Generate Laporan</button>
+                    <button onclick="downloadCSV()" class="btn-outline">📥 Download Excel (CSV)</button>
+                </div>
+            </div>
+
+            <div class="sub-tabs">
+                <button class="sub-btn active" onclick="switchTab('tab-finansial', this)">1. Finansial & Laba</button>
+                <button class="sub-btn" onclick="switchTab('tab-logistik', this)">2. Mutasi Logistik Cabang</button>
+                <button class="sub-btn" onclick="switchTab('tab-opname', this)">3. Audit Opname & Produksi</button>
+            </div>
+
+            <div id="tab-finansial" class="laporan-section active">
+                <div class="metrics-grid">
+                    <div class="metric-card omset"><div class="metric-title">Pendapatan Kotor (Omset)</div><div class="metric-value" id="val-omset">Rp 0</div></div>
+                    <div class="metric-card hpp"><div class="metric-title">Total Harga Modal (HPP)</div><div class="metric-value" id="val-hpp" style="color: #f57f17;">Rp 0</div></div>
+                    <div class="metric-card expense"><div class="metric-title">Pengeluaran Kas</div><div class="metric-value" id="val-expense" style="color: #dc3545;">Rp 0</div></div>
+                    <div class="metric-card profit"><div class="metric-title">LABA BERSIH OPERASIONAL</div><div class="metric-value" id="val-profit" style="color: #2e7d32;">Rp 0</div></div>
+                </div>
+                <h3 style="font-size: 16px; margin-bottom: 15px; color: #1a1a1a;">Rincian Barang Terjual (Best Seller)</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead><tr><th>Nama Produk</th><th style="text-align: center;">Terjual</th><th style="text-align: right;">Total Omset</th><th style="text-align: right;">Total Modal (HPP)</th><th style="text-align: right;">Margin Laba</th></tr></thead>
+                        <tbody id="report-finansial-body"><tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Tarik data untuk melihat laporan.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-logistik" class="laporan-section">
+                <h3 style="font-size: 16px; margin-bottom: 15px; color: #1a1a1a;">Laporan Distribusi Barang Keluar (Pusat) & Masuk (Cabang)</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead><tr><th>Tanggal Proses</th><th>Cabang Tujuan</th><th>Rincian Barang (Order vs Diterima)</th><th>Status Logistik</th></tr></thead>
+                        <tbody id="report-logistik-body"><tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Tarik data untuk melihat laporan.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-opname" class="laporan-section">
+                <h3 style="font-size: 16px; margin-bottom: 15px; color: #1a1a1a;">Jejak Audit Penyesuaian Stok (Opname) & Hasil Produksi</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead><tr><th>Waktu Eksekusi</th><th>Nama Produk</th><th>Jenis Aktivitas</th><th>Penyesuaian Qty</th></tr></thead>
+                        <tbody id="report-opname-body"><tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Tarik data untuk melihat laporan.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        
+        if (localStorage.getItem('userRole') !== 'admin_pusat' && localStorage.getItem('userRole') !== 'admin') {
+            alert("Akses ditolak! Halaman laporan khusus Admin Pusat."); window.location.href = 'login.html';
+        }
+        
+        // Setup Tanggal Default
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('date-start').value = firstDay.toISOString().split('T')[0];
+        document.getElementById('date-end').value = today.toISOString().split('T')[0];
+
+        // SWITCHER TAB INTERNAL
+        function switchTab(targetId, btnEl) {
+            document.querySelectorAll('.laporan-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+            document.querySelectorAll('.sub-btn').forEach(btn => btn.classList.remove('active'));
+            btnEl.classList.add('active');
+        }
+
+        // TAMPILKAN NOTIFIKASI VISUAL
+        function showNotification(message, isSuccess = true) {
+            const alertBox = document.createElement('div');
+            alertBox.innerText = message;
+            alertBox.style.cssText = `position:fixed; top:20px; right:20px; background:${isSuccess ? '#2e7d32' : '#dc3545'}; color:white; padding:15px 25px; border-radius:8px; z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.2); font-weight:bold; font-size: 14px; transition:0.3s;`;
+            document.body.appendChild(alertBox);
+            setTimeout(() => alertBox.remove(), 3000);
+        }
+
+        // FUNGSI UTAMA: MENARIK 3 LAPORAN SEKALIGUS
+        async function tarikSemuaData() {
+            const btn = document.getElementById('btn-kalkulasi');
+            btn.innerText = 'Menganalisis Server...'; btn.disabled = true;
+
+            const startDate = document.getElementById('date-start').value;
+            const endDate = document.getElementById('date-end').value;
+            const branch = document.getElementById('filter-branch').value;
+
+            const startISO = new Date(startDate + "T00:00:00").toISOString();
+            const endISO = new Date(endDate + "T23:59:59.999").toISOString();
+
+            try {
+                await Promise.all([
+                    prosesLaporanFinansial(startISO, endISO, branch),
+                    prosesLaporanLogistik(startISO, endISO, branch),
+                    prosesLaporanOpname(startISO, endISO)
+                ]);
+                showNotification('✅ Data Laporan Berhasil Diperbarui secara Real-Time!');
+            } catch (err) {
+                console.error(err);
+                showNotification('❌ Gangguan koneksi. Pastikan kolom HPP tersedia.', false);
+            } finally {
+                btn.innerText = '🔄 Generate Laporan'; btn.disabled = false;
+            }
+        }
+
+        // ================= ENGINE 1: FINANSIAL (DENGAN SMART FILTER KAS) =================
+        async function prosesLaporanFinansial(startISO, endISO, branch) {
+            let trxQuery = supabaseClient.from('transactions').select('id, total_amount, branch, transaction_items(qty, price, products(name, hpp))').eq('status', 'paid').gte('created_at', startISO).lte('created_at', endISO);
+            if (branch !== 'Semua') trxQuery = trxQuery.eq('branch', branch);
+            
+            // SMART FILTER KAS: Tarik description untuk disensor
+            let kasQuery = supabaseClient.from('buku_kas').select('amount, description').eq('type', 'out').gte('created_at', startISO).lte('created_at', endISO);
+            
+            const [{ data: trxData }, { data: kasData }] = await Promise.all([trxQuery, kasQuery]);
+
+            let totalOmset = 0, totalHpp = 0, totalExpense = 0, productStats = {};
+
+            if (trxData) {
+                trxData.forEach(trx => {
+                    totalOmset += trx.total_amount;
+                    if (trx.transaction_items) {
+                        trx.transaction_items.forEach(item => {
+                            const hppSatuan = item.products?.hpp || 0;
+                            const namaProduk = item.products?.name || 'Produk Terhapus';
+                            const totalHppItem = hppSatuan * item.qty;
+                            const totalOmsetItem = item.price * item.qty;
+                            
+                            totalHpp += totalHppItem;
+                            if (!productStats[namaProduk]) productStats[namaProduk] = { qty: 0, omset: 0, hpp: 0 };
+                            productStats[namaProduk].qty += item.qty;
+                            productStats[namaProduk].omset += totalOmsetItem;
+                            productStats[namaProduk].hpp += totalHppItem;
+                        });
+                    }
+                });
+            }
+
+            if (kasData) {
+                kasData.forEach(kas => {
+                    // LOGIKA SMART FILTER KAS
+                    if (branch !== 'Semua') {
+                        const deskripsi = (kas.description || '').toLowerCase();
+                        if (deskripsi.includes(branch.toLowerCase())) {
+                            totalExpense += Number(kas.amount);
+                        }
+                    } else {
+                        totalExpense += Number(kas.amount);
+                    }
+                });
+            }
+
+            const labaBersih = totalOmset - totalHpp - totalExpense;
+
+            document.getElementById('val-omset').innerText = `Rp ${totalOmset.toLocaleString('id-ID')}`;
+            document.getElementById('val-hpp').innerText = `Rp ${totalHpp.toLocaleString('id-ID')}`;
+            document.getElementById('val-expense').innerText = `Rp ${totalExpense.toLocaleString('id-ID')}`;
+            const elProfit = document.getElementById('val-profit');
+            elProfit.innerText = `Rp ${labaBersih.toLocaleString('id-ID')}`;
+            elProfit.style.color = labaBersih >= 0 ? '#2e7d32' : '#dc3545';
+
+            const tbody = document.getElementById('report-finansial-body'); tbody.innerHTML = '';
+            const sortedProducts = Object.keys(productStats).map(key => ({ name: key, ...productStats[key] })).sort((a, b) => b.qty - a.qty);
+
+            if (sortedProducts.length > 0) {
+                sortedProducts.forEach(p => {
+                    tbody.innerHTML += `<tr><td style="font-weight:600;">${p.name}</td><td style="text-align: center; font-weight:700;">${p.qty}</td><td style="text-align: right; color:#0288d1; font-weight:600;">Rp ${p.omset.toLocaleString('id-ID')}</td><td style="text-align: right; color:#f57f17; font-weight:600;">Rp ${p.hpp.toLocaleString('id-ID')}</td><td style="text-align: right; color:#2e7d32; font-weight:700;">Rp ${(p.omset - p.hpp).toLocaleString('id-ID')}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6e6e6e;">Tidak ada data penjualan pada periode ini.</td></tr>'; }
+        }
+
+        // ================= ENGINE 2: LOGISTIK MUTASI CABANG =================
+        async function prosesLaporanLogistik(startISO, endISO, branch) {
+            let logistikQuery = supabaseClient.from('order_cabang').select('created_at, branch_name, status, order_cabang_detail(item_name, qty)').in('status', ['dikirim', 'konfirmasi']).gte('created_at', startISO).lte('created_at', endISO).order('created_at', { ascending: false });
+            if (branch !== 'Semua') logistikQuery = logistikQuery.eq('branch_name', branch);
+
+            const { data } = await logistikQuery;
+            const tbody = document.getElementById('report-logistik-body'); tbody.innerHTML = '';
+
+            if (data && data.length > 0) {
+                data.forEach(log => {
+                    let itemsHtml = log.order_cabang_detail.map(d => `• ${d.item_name} <strong style="color:#8b1a1a;">(Req: ${d.qty})</strong>`).join('<br>');
+                    let statBadge = log.status === 'konfirmasi' ? '<span class="badge-status bg-in">Diterima Cabang</span>' : '<span class="badge-status bg-neutral">Sedang Dikirim</span>';
+                    tbody.innerHTML += `<tr><td>${new Date(log.created_at).toLocaleString('id-ID')}</td><td style="font-weight:700;">Arasa ${log.branch_name}</td><td style="line-height:1.6;">${itemsHtml}</td><td>${statBadge}</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Tidak ada mutasi barang pada rentang tanggal ini.</td></tr>'; }
+        }
+
+        // ================= ENGINE 3: OPNAME & PRODUKSI =================
+        async function prosesLaporanOpname(startISO, endISO) {
+            const { data } = await supabaseClient.from('stock_logs')
+                .select('created_at, change_qty, reason, products(name)')
+                .not('reason', 'like', 'sales_%')
+                .gte('created_at', startISO).lte('created_at', endISO)
+                .order('created_at', { ascending: false });
+
+            const tbody = document.getElementById('report-opname-body'); tbody.innerHTML = '';
+
+            if (data && data.length > 0) {
+                data.forEach(log => {
+                    let namaProd = log.products?.name || 'Produk Dihapus';
+                    let jenisAktivitas = ''; let badgeClass = '';
+                    
+                    if (log.reason.includes('opname')) { jenisAktivitas = 'Audit Penyesuaian Fisik (Opname)'; badgeClass = 'bg-out'; } 
+                    else if (log.reason.includes('produksi')) { jenisAktivitas = 'Setoran Hasil Produksi Dapur'; badgeClass = 'bg-in'; } 
+                    else if (log.reason.includes('restock')) { jenisAktivitas = 'Restock Suplai'; badgeClass = 'bg-neutral'; } 
+                    else { jenisAktivitas = log.reason.replace(/_/g, ' ').toUpperCase(); badgeClass = 'bg-neutral'; }
+
+                    let sign = log.change_qty > 0 ? '+' : '';
+                    let colorQty = log.change_qty > 0 ? '#2e7d32' : '#dc3545';
+
+                    tbody.innerHTML += `<tr><td>${new Date(log.created_at).toLocaleString('id-ID')}</td><td style="font-weight:700;">${namaProd}</td><td><span class="badge-status ${badgeClass}">${jenisAktivitas}</span></td><td style="font-size:16px; font-weight:800; color:${colorQty};">${sign}${log.change_qty} Pcs</td></tr>`;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#6e6e6e;">Tidak ada jejak opname atau produksi pada rentang tanggal ini.</td></tr>'; }
+        }
+
+        // ================= FITUR DOWNLOAD CSV CERDAS (FIX EXCEL INDONESIA) =================
+        function downloadCSV() {
+            const activeSection = document.querySelector('.laporan-section.active');
+            if (!activeSection) return alert("Tidak ada data untuk diunduh.");
+
+            const table = activeSection.querySelector('table');
+            if (!table) return alert("Tabel tidak ditemukan.");
+
+            // INJEKSI BOM (\uFEFF) AGAR EXCEL BISA MEMBACA SIMBOL (•) DENGAN BENAR
+            let csvContent = "\uFEFF"; 
+            const rows = table.querySelectorAll('tr');
+
+            let fileName = "Laporan_Arasa.csv";
+            let judulLaporan = "Laporan General";
+            if (activeSection.id === 'tab-finansial') { fileName = "Laporan_Finansial_Arasa.csv"; judulLaporan = "LAPORAN FINANSIAL & LABA BERSIH"; }
+            if (activeSection.id === 'tab-logistik') { fileName = "Laporan_Mutasi_Logistik.csv"; judulLaporan = "LAPORAN MUTASI & DISTRIBUSI LOGISTIK"; }
+            if (activeSection.id === 'tab-opname') { fileName = "Laporan_Opname_Produksi.csv"; judulLaporan = "LAPORAN AUDIT OPNAME & PRODUKSI"; }
+
+            const tglMulai = document.getElementById('date-start').value;
+            const tglSampai = document.getElementById('date-end').value;
+            const cabang = document.getElementById('filter-branch').options[document.getElementById('filter-branch').selectedIndex].text;
+            
+            // GUNAKAN TITIK KOMA (;) UNTUK REGION INDONESIA
+            csvContent += `"${judulLaporan}"\n`;
+            csvContent += `"Periode:";"${tglMulai}";"s/d";"${tglSampai}"\n`;
+            csvContent += `"Filter Cabang:";"${cabang}"\n\n`;
+
+            rows.forEach(row => {
+                let rowData = [];
+                const cols = row.querySelectorAll('td, th');
+                cols.forEach(col => {
+                    let text = col.innerText.replace(/(\r\n|\n|\r)/gm, " | ");
+                    text = text.replace(/"/g, '""');
+                    rowData.push(`"${text}"`);
+                });
+                // GABUNGKAN DENGAN TITIK KOMA (;) BUKAN KOMA (,)
+                csvContent += rowData.join(";") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('📥 Berhasil Mengunduh Laporan dalam format CSV/Excel.');
+        }
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+        
+        // Auto-load
+        tarikSemuaData();
+    </script>
+</body>
+</html>

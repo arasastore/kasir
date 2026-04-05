@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Login - Arasa Enterprise</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .login-box { background: #ffffff; padding: 50px 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 420px; border-top: 6px solid #8b1a1a; }
+        .login-box h2 { margin-bottom: 8px; font-size: 26px; color: #1a1a1a; font-weight: 800; letter-spacing: 1px; }
+        .login-box p { color: #6e6e6e; font-size: 14px; margin-bottom: 35px; font-weight: 500; }
+        input { width: 100%; padding: 18px; margin-bottom: 25px; border: 1px solid #dcdcdc; border-radius: 12px; font-size: 24px; text-align: center; letter-spacing: 12px; font-weight: 700; transition: 0.3s; outline: none; color: #1a1a1a; background: #fafafa; }
+        input:focus { border-color: #8b1a1a; background: #ffffff; box-shadow: 0 0 0 4px rgba(139, 26, 26, 0.1); }
+        .btn-login { width: 100%; padding: 16px; background: #8b1a1a; color: #ffffff; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; transition: 0.2s; letter-spacing: 0.5px; }
+        .btn-login:hover { background: #6b1414; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>ARASA ENTERPRISE</h2>
+        <p>Otorisasi Keamanan Sistem</p>
+        <input type="password" id="pin-input" placeholder="****" maxlength="6">
+        <button onclick="prosesLogin()" class="btn-login">Akses Sistem</button>
+    </div>
+    <script>
+        const supabaseClient = supabase.createClient('https://xlfbiavdodyxnmgnsvls.supabase.co', 'sb_publishable_wAvlgdaWcmevkDxOSTALwQ_wpUP5byQ');
+        async function prosesLogin() {
+            const pin = document.getElementById('pin-input').value;
+            const { data } = await supabaseClient.from('users').select('*').eq('pin', pin).single();
+            if (data) {
+                localStorage.setItem('userName', data.name); 
+                localStorage.setItem('userRole', data.role); 
+                localStorage.setItem('userBranch', data.branch || 'Pusat'); 
+                localStorage.setItem('loginTime', Date.now().toString());
+                if (data.role === 'admin_pusat') window.location.href = 'admin.html';
+                else if (data.role.startsWith('produksi_p')) window.location.href = 'produksi.html';
+                else if (data.role === 'produksi_goreng') window.location.href = 'kds_system.html';
+                else window.location.href = 'index.html'; 
+            } else {
+                alert("Otorisasi ditolak. PIN tidak dikenali.");
+            }
+        }
+        document.getElementById('pin-input').addEventListener('keypress', function (e) { if (e.key === 'Enter') prosesLogin(); });
+    </script>
+</body>
+</html>
